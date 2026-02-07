@@ -385,6 +385,12 @@ namespace tx {
 				m_b / 255.0f
 			};
 		}
+		inline void transpose() {
+			std::swap(m_r, m_b);
+		}
+		inline RGB transposed() const {
+			return RGB{m_b, m_g, m_r};
+		}
 	private:
 		float m_r, m_g, m_b;
 	};

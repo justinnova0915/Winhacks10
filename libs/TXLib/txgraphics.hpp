@@ -115,6 +115,14 @@ namespace tx {
 			topLeft.offsetY(-height)
 		);
 	}
+	void drawRectP(const vec2& bottomLeft, float width, float height) {
+		drawQuad(
+			bottomLeft.offsetY(height),
+			bottomLeft.offset(width, height),
+			bottomLeft.offsetX(width),
+			bottomLeft
+		);
+	}
 	void drawDomain(const vec2& center, float width, float height, float lineWidth = 0.001f) {
 		float halfWidth = width * 0.5, halfHeight = height * 0.5;
 		vec2 innerTopLeft = center.offset(-halfWidth, halfHeight);
@@ -342,7 +350,7 @@ namespace tx {
 					cout << "[FatalError]: Invalid window token.\n";
 					return;
 				}
-				cout << this->window;
+				cout << this->window << '\n';
 				while (!glfwWindowShouldClose(this->window)) {
 					//cout << "iteration started\n";
 					if constexpr (mode == Mode::Release) {

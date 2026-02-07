@@ -1,5 +1,15 @@
-#include "header.h"
-#include "libs/GLFW/include/glfw3.h"
+#include <bits/stdc++.h>
+#include "GLFW/glfw3.h"
+
+using std::cout;
+using std::cin;
+using std::endl;
+using std::vector;
+using std::string;
+
+namespace std {
+	namespace fs = filesystem;
+}
 
 //#include "ZigZag.h"
 //#include "Bad Apple!!.h";
@@ -38,11 +48,11 @@ inline bool operator&(Enum a, Enum b) {
 	return (static_cast<T>(a) & static_cast<T>(b));
 }
 
-std::filesystem::path getExePath() {
-	char buffer[MAX_PATH];
-	GetModuleFileNameA(NULL, buffer, MAX_PATH);
-	return std::filesystem::path(buffer);
-}
+// std::filesystem::path getExePath() {
+// 	char buffer[MAX_PATH];
+// 	GetModuleFileNameA(NULL, buffer, MAX_PATH);
+// 	return std::filesystem::path(buffer);
+// }
 enum TimerFlag {
 	NoEndLog,
 	AutoLog
@@ -78,7 +88,7 @@ private:
 	static std::ofstream ofs;
 	std::chrono::steady_clock::time_point start;
 };
-std::ofstream Timer::ofs = std::ofstream(getExePath().parent_path() / "debugLog.txt", std::ios::app);
+// std::ofstream Timer::ofs = std::ofstream(getExePath().parent_path() / "debugLog.txt", std::ios::app);
 void debugLogInit() {
 	//std::filesystem::remove(getExePath().parent_path() / "debugLog.txt");
 }
@@ -163,7 +173,7 @@ private:
 
 std::mutex LogFile::mutex;
 bool LogFile::isActive = 1;
-std::ofstream LogFile::ofs = std::ofstream(getExePath().parent_path() / "debugLog.txt");
+// std::ofstream LogFile::ofs = std::ofstream(getExePath().parent_path() / "debugLog.txt");
 
 
 GLFWwindow* windowG;
@@ -539,10 +549,10 @@ void displayImmidietly() {
 
 
 // Engine *********************************************************************************************************************
-// Õû¸öÎïÀíÒýÇæ¼Ü¹¹¾ÍÊÇÒ»¸öÆæ¹ÖµÄÈý½ÇÁµ¡£
-// ÎÒ°® Euler£¬Euler ²»°®ÎÒ¡£
-// Verlet °®ÎÒ£¬ÎÒ²»°® Verlet¡£
-// Verlet -> ÎÒ -> Euler
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¹ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+// ï¿½Ò°ï¿½ Eulerï¿½ï¿½Euler ï¿½ï¿½ï¿½ï¿½ï¿½Ò¡ï¿½
+// Verlet ï¿½ï¿½ï¿½Ò£ï¿½ï¿½Ò²ï¿½ï¿½ï¿½ Verletï¿½ï¿½
+// Verlet -> ï¿½ï¿½ -> Euler
 
 constexpr int GridMaxOccupation = 51;
 constexpr int GridSizeIndex = GridMaxOccupation - 1;
@@ -690,7 +700,7 @@ private:
 	std::atomic<int> maxGridObjectCount = 0;
 
 
-	std::ofstream ofs = std::ofstream(getExePath().parent_path() / "debugLog.txt");
+	// std::ofstream ofs = std::ofstream(getExePath().parent_path() / "debugLog.txt");
 
 	void __update(){
 		//Timer timer("Update");
@@ -1040,7 +1050,7 @@ private:
 			}
 		}*/
 	}
-	// ÄãÒÔÎªÕâÊÇ Vertet ±»ÎÒµ÷½ÌµÄ²î²»¶àÁË£¿²»²»²»£¬ÕâÊÇÎÒ±» Verlet µ÷½ÌµÄ²î²»¶àÁË¡£
+	// ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ Vertet ï¿½ï¿½ï¿½Òµï¿½ï¿½ÌµÄ²î²»ï¿½ï¿½ï¿½Ë£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò±ï¿½ Verlet ï¿½ï¿½ï¿½ÌµÄ²î²»ï¿½ï¿½ï¿½Ë¡ï¿½
 	void solveCollision(PhysicalObject& obja, PhysicalObject& objb) {
 		// basic variables
 		vec2 deltaVec = obja.getPos() - objb.getPos();

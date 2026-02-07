@@ -19,6 +19,12 @@ namespace tx {
 					return a.y() < b.y();
 				}
 			});
+		map.erase(std::unique(map.begin(), map.end()));
+	}
+	void clampBitmap(Bitmap& map, const Coord& bottomLeft, const Coord& topRight){
+		map.erase(std::remove_if(map.begin(), map.end(), [&](const Coord& in) {
+			return tx::inRange(in, bottomLeft, topRight);
+		}));
 	}
 
 	// (NDC) Normalized Device Coordinates, also known as the [-1, 1] range, is which OpenGL used for it's coordinate system
@@ -38,10 +44,12 @@ namespace tx {
 			Width(in_SideLen), Height(in_SideLen)
 		{
 			this->map.assign(tx::sq(in_SideLen), T{});
-
-
 		}
-
+		GridSystem(int in_width, int in_height) :
+			Width(in_width), Height(in_height)
+		{
+			this->map.assign(in_width * in_height, T{});
+		}
 
 
 		void fill(const vector<tx::Coord>& coords, const T& val) {
@@ -60,14 +68,14 @@ namespace tx {
 			return this->at(pos.x(), pos.y());
 		}
 		inline T& at(int x, int y) {
-			return this->map[y * this->Width + x];
+			return this->map[index(x, y)];
 		}
 		inline T* atSafe(const tx::Coord& pos) {
 			return this->atSafe(pos.x(), pos.y());
 		}
 		inline T* atSafe(int x, int y) {
 			if (valid(x, y))
-				return &this->map[y * this->Width + x];
+				return &this->map[index(x, y)];
 			else
 				return nullptr;
 		}
@@ -85,14 +93,31 @@ namespace tx {
 		}
 		inline int getWidth() const { return this->Width; }
 		inline int getHeight() const { return this->Height; }
-		inline int size() const { return this->Width; }
+		inline int size() const { return this->map.size(); }
+		inline int rowsize() const { return this->Width; }
 		inline tx::Coord getCoord(const tx::vec2& in) const { return tx::Coord{ static_cast<int>((in.x() + 1.0f) / 2.0f * Width), static_cast<int>((in.y() + 1.0f) / 2.0f * Height) }; }
+		inline int index(int x, int y) const { return y * this->Width + x; }
+		inline int index(const tx::Coord& in) const { return index(in.x(), in.y()); }
+
 
 		inline void reinit(int in_sideLen) {
 			map.clear();
 			this->map.assign(tx::sq(in_sideLen), T{});
 			Width = Height = in_sideLen;
 		}
+
+		inline vector<T>& data() { return map; }
+
+		
+		template<class Func>
+		void foreach(const Func& func){
+			static_assert(std::is_invocable_v<Func, T&>, "tx::GridSystem::foreach: invalid callback function");
+			
+			for(T& i : map){
+				func(i);
+			}
+		}
+
 
 	private:
 		vector<T> map;
@@ -165,18 +190,22 @@ namespace tx {
 	// using positive quadrant (math coordinate system)
 	class PixelEngine {
 	public:
-		static void drawRow(int y, int x_start, int x_end, const tx::RGB& color, float GridSize) {
+		static void drawRow(int y, int x_start, int x_end, const tx::RGB& color, float GridSize, vec2 offset) {
 			if (color == tx::Black) return;
 			tx::glColorRGB(color);
-			drawRow(y, x_start, x_end, GridSize);
+			drawRow(y, x_start, x_end, GridSize, offset);
 		}
-		static void drawRow(int y, int x_start, int x_end, float GridSize) {
+		static void drawRow(int y, int x_start, int x_end, float GridSize, const vec2& offset) {
 			float width = (x_end - x_start + 1) * GridSize;
 			tx::vec2 topLeft(x_start * GridSize - 1.0f, y * GridSize - 1.0f + GridSize);
-			tx::drawRect(topLeft, width, GridSize);
+			tx::drawRect(topLeft + offset, width, GridSize);
 		}
 		template<class T, class Func>
-		static void draw(GridSystem<T>& gs, Func modifierCallback) {
+		static void draw(
+			GridSystem<T>& gs, 
+			Func modifierCallback,
+			const vec2& pos = BottomLeft, // bottom left of the map
+			float mapSize = 2.0f) {
 			using ReturnVal = std::invoke_result_t<Func, T>;
 			static_assert(std::is_invocable_v<Func, T>,
 				"tx::PixelEngine::draw(): modifierCallback provided must take in a parameter of T(type of tx::GridSystem provided). The provided callable don't match the requirement.");
@@ -185,25 +214,30 @@ namespace tx {
 			static_assert(std::is_convertible_v<decltype(std::declval<T>() != std::declval<T>()), bool>,
 				"tx::PixelEngine::draw(): the type of GridSystem<T> must be comparable with operator!=.");
 
-			float gridSize = 2.0 / gs.getWidth();
+			//cout << "start\n";
+
+			float gridSize = mapSize / gs.getWidth();
+			vec2 offset = pos - BottomLeft;
 
 			T previous = gs.at(0, 0);
 			int previousX = 0;
 			int index = 0;
 			for (int y = 0; y < gs.getHeight(); ++y) {
+				//cout << "row: " << y << "\n\n";
 				previousX = 0;
 				previous = gs.at(index);
 				for (int x = 0; x < gs.getWidth(); ++x) {
+					//cout << "col: " << x;
 					if (previous != gs.at(index)) {
 						// draw previous
-						drawRow(y, previousX, x - 1, modifierCallback(previous), gridSize);
+						drawRow(y, previousX, x - 1, modifierCallback(previous), gridSize, offset);
 						previous = gs.at(index);
 						previousX = x;
 					}
 					++index;
 				}
 				// draw last piece
-				drawRow(y, previousX, gs.getWidth() - 1, modifierCallback(previous), gridSize);
+				drawRow(y, previousX, gs.getWidth() - 1, modifierCallback(previous), gridSize, offset);
 			}
 		}
 		static void drawBitmap(const Bitmap& map, float sideLen, const Coord& offset = CoordOrigin) {
@@ -215,7 +249,7 @@ namespace tx {
 			int startX = map.front().x();
 			int previousX = startX, previousY = map.front().y();
 			auto finishRowSeg = [&](const Coord& cur) {
-				drawRow(previousY, startX, previousX, GridSize);
+				drawRow(previousY, startX, previousX, GridSize, BottomLeft);
 				startX = cur.x();
 				};
 
@@ -226,13 +260,13 @@ namespace tx {
 				} previousX = i.x();
 			}
 			// draw last segment
-			drawRow(previousY, startX, previousX, GridSize);
+			drawRow(previousY, startX, previousX, GridSize, BottomLeft);
 		}
 		static void drawBoolmap(GridSystem<uint8_t>& gs) {
 			draw(gs, getBWColor);
 		}
-		static void drawRGBmap(GridSystem<RGB>& gs) {
-			draw(gs, [](const RGB& in) -> const RGB& { return in; });
+		static void drawRGBmap(GridSystem<RGB>& gs, const vec2& pos = BottomLeft, float mapSize = 2.0f) {
+			draw(gs, [](const RGB& in) -> const RGB& { return in; }, pos, mapSize);
 		}
 		static constexpr inline float getGridSize(int in_sideLen) { return 2.0f / in_sideLen; }
 
@@ -257,6 +291,8 @@ namespace tx {
 		}
 
 		void getBitMap(const tx::Coord& center, vector<tx::Coord>& buffer) {
+			buffer.clear();
+			buffer.reserve(getGridAmount());
 			buffer.push_back(center);
 			for (int j = 0; j < 2; j++) {
 				tx::Coord temp = center;

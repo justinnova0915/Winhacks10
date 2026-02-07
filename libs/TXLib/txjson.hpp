@@ -157,27 +157,40 @@ namespace tx {
 
 
 		void _parseObject(const string& str, JsonObject& root, int& index) { // index is where the { of the object is in the entire string
+			cout << "new object\n";
 			++index;
 			KVMap<string, JsonValue>& rootmap = root.members;
 
 			while (1) {
+				cout << "entry start.\n";
 				index = str.find_first_not_of("\n\t\r ,", index);
+				cout << index << '\n';
 				if (index == string::npos) _throw();
 				if (str[index] == '}') break;
 				if (str[index] != '"') _throw();
 				_parseKeyValue(str, root, index);
+				cout << "entry ends.\n";
 			}
 
 			rootmap.validate();
 		}
 		void _parseKeyValue(const string& str, JsonObject& root, int& index) { // index is where the " of the key is in the entire string
+			cout << "start parse kv" << endl;
 			JsonMap& rootmap = root.members;
+			cout << "end copy map" << endl;
 			// determind key
-			JsonMapHandle hValue = rootmap.insertMulti(__parseString(str, index));
+			string strr = parseString_impl(str, index);
+			cout << "new value: " << strr << endl;
+			cout << "appemting to add entry" << endl;
+			for(int i = 0; i < rootmap.size(); i++){
+				cout << rootmap.atIndex(i).k() << endl;
+			}
+			JsonMapHandle hValue = rootmap.insertMulti(strr);
 
 			index = str.find_first_not_of(": ", index);
 			if (index == string::npos) _throw();
 			_parseValue(str, hValue.get(), index);
+			// after this function returns, index should be at the index after the value, which should be a comma: ,
 		}
 		void _parseValue(const string& str, JsonValue& value, int& index) { // index is the first character of the value
 			switch (str[index]) {
@@ -230,7 +243,7 @@ namespace tx {
 		//	index += boolean ? 4 : 5;
 		//}
 		void _parseString(const string& str, JsonValue& value, int& index) { // index is the first character of the string // this is the parseString for values
-			value = __parseString(str, index);
+			value = parseString_impl(str, index);
 		}
 		void _parseArray(const string& str, JsonValue& value, int& index) {
 			value = JsonArray{};
@@ -297,14 +310,16 @@ namespace tx {
 				++counter;
 			} return counter % 2;
 		}
-		string __parseString(const string& str, int& index) { // index is the first character of the string // this is the parseString for the fundamental process of find string between 2 " s
+		string parseString_impl(const string& str, int& index) { // index is the first character of the string // this is the parseString for the fundamental process of find string between 2 " s
+			cout << "start parse string" << endl;
 			++index;
 			int tempIndex = index;
 			do {
 				index = str.find('"', index);
 				if (index == string::npos) _throw();
 			} while (isEscapedCharacter(str, index++));
-
+			cout << "end parse string" << endl;
+			
 			//return { tempIndex, index++ };
 			return str.substr(tempIndex, index - tempIndex - 1);
 			// after this function returns, index should be at the index after ", which should be a comma: , or a colon: :

@@ -97,7 +97,7 @@ namespace tx {
 		inline const VT& at(const KT& key) const {
 			auto it = findItDisorder_impl(key);
 			if (validIt_impl(it, key)) return it->v();
-			else throw_Impl();
+			else throw_Impl(key);
 		}
 
 		inline Handle insertMulti(const KT& key, const VT& value = VT{}) {
@@ -126,13 +126,13 @@ namespace tx {
 			validate();
 			auto it = findItOrder_impl(key);
 			if (validIt_impl(it, key)) return it->v();
-			else throw_Impl();
+			else throw_Impl(key);
 		}
 
 		inline Handle set(const KT& key, const VT& value) {
 			validate();
 			auto it = findItOrder_impl(key);
-			if (!validIt_impl(it, key)) throw_Impl();
+			if (!validIt_impl(it, key)) throw_Impl(key);
 			it->v() = value;
 			return Handle(this, static_cast<int>(it - this->pairs.begin()));
 		}
@@ -140,7 +140,7 @@ namespace tx {
 		inline void remove(const KT& key) {
 			validate();
 			auto it = findItOrder_impl(key);
-			if (!validIt_impl(it, key)) throw_Impl();
+			if (!validIt_impl(it, key)) throw_Impl(key);
 			if (pairs.size() < 100) {
 				std::swap(*it, pairs.back());
 				pairs.pop_back();
@@ -185,7 +185,11 @@ namespace tx {
 
 		inline bool isSame_impl(const KT& a, const KT& b) const { return cmp(a, b) != cmp(b, a); }
 		template<class It>
-		inline bool validIt_impl(const It& it, const KT& key) const { return (it != pairs.end() && isSame_impl(it->k(), key)); }
+		inline bool validIt_impl(const It& it, const KT& key) const { 
+			if(it == pairs.end()) return 0;
+			cout << it->k() << endl;
+			return (isSame_impl(it->k(), key)); 
+		}
 
 
 		// findIt in range (from start)
@@ -221,7 +225,7 @@ namespace tx {
 
 		inline Handle insertOrder_impl(const KT& key, const VT& value) {
 			auto it = findItOrder_impl(key);
-			if (validIt_impl(it, key)) throw_Impl();
+			if (validIt_impl(it, key)) throw_Impl(key);
 			this->pairs.insert(it, Pair{ key, value });
 			return Handle{ this, static_cast<int>(it - this->pairs.begin()) };
 		}
@@ -238,7 +242,7 @@ namespace tx {
 
 		inline Handle insertDisorder_impl(const KT& key, const VT& value) {
 			// check if exist
-			if (existDisorder_impl(key)) throw_Impl();
+			if (existDisorder_impl(key)) throw_Impl(key);
 
 			this->pairs.emplace_back(key, value);
 			if (this->m_valid) {
@@ -256,7 +260,15 @@ namespace tx {
 		}
 
 		inline bool existDisorder_impl(const KT& key) const {
-			if (validIt_impl(findIt__impl(key, this->disorderIndex), key)) return 1;
+			cout << "existDisorder_impl: " << endl;
+			cout << key << endl;
+			auto it = findIt__impl(key, this->disorderIndex);
+			if (validIt_impl(it, key)) {
+				cout << it->k() << endl;
+				cout << "fount it!" << endl;
+				return 1;
+			}
+			cout << "existDisorder_impl steps" << endl;
 			for (int i = this->disorderIndex; i < pairs.size(); ++i) {
 				if (pairs[i].k() == key) { return 1; }
 			} return 0;
@@ -265,8 +277,8 @@ namespace tx {
 
 
 		// throw
-		inline void throw_Impl() const {
-			throw std::out_of_range{ "tx::KVMap::at(): key not found." };
+		inline void throw_Impl(const string& key) const {
+			throw std::out_of_range{ string{"tx::KVMap::at(): "} + key + ": key not found." };
 		}
 	};
 
