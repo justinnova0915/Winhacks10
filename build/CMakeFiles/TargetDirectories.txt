@@ -1,7 +1,0 @@
-/home/TX_Jerry/Documents/Programming/winhacks/build/CMakeFiles/WinHacks.dir
-/home/TX_Jerry/Documents/Programming/winhacks/build/CMakeFiles/edit_cache.dir
-/home/TX_Jerry/Documents/Programming/winhacks/build/CMakeFiles/rebuild_cache.dir
-/home/TX_Jerry/Documents/Programming/winhacks/build/CMakeFiles/list_install_components.dir
-/home/TX_Jerry/Documents/Programming/winhacks/build/CMakeFiles/install.dir
-/home/TX_Jerry/Documents/Programming/winhacks/build/CMakeFiles/install/local.dir
-/home/TX_Jerry/Documents/Programming/winhacks/build/CMakeFiles/install/strip.dir

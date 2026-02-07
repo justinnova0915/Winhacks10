@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/home/TX_Jerry/Documents/Programming/winhacks/build",
-  "command": "/usr/bin/g++ -I/home/TX_Jerry/Documents/Programming/winhacks -I/home/TX_Jerry/Documents/Programming/winhacks/libs -I/home/TX_Jerry/Documents/Programming/winhacks/src -g -std=gnu++20 -fmodules-ts -fmodule-mapper=CMakeFiles/WinHacks.dir/src/main.cpp.o.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles/WinHacks.dir/src/main.cpp.o -c /home/TX_Jerry/Documents/Programming/winhacks/src/main.cpp",
-  "file": "/home/TX_Jerry/Documents/Programming/winhacks/src/main.cpp",
-  "output": "/home/TX_Jerry/Documents/Programming/winhacks/build/CMakeFiles/WinHacks.dir/src/main.cpp.o"
-}
-]

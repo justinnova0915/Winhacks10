@@ -1,7 +1,0 @@
-# ninja log v7
-2	185	1770436344705276694	CMakeFiles/WinHacks.dir/src/main.cpp.o.ddi	f3758225e085d4e
-185	196	1770436344888278538	CMakeFiles/WinHacks.dir/CXX.dd	a499d93b6aeddff4
-185	196	1770436344888278538	CMakeFiles/WinHacks.dir/CXXModules.json	a499d93b6aeddff4
-185	196	1770436344888278538	CMakeFiles/WinHacks.dir/src/main.cpp.o.modmap	a499d93b6aeddff4
-196	2401	1770436344899701102	CMakeFiles/WinHacks.dir/src/main.cpp.o	d9632dab8d5a0ebf
-2401	2464	1770436347104300863	bin/WinHacks	f55ea3f41c23a52c
