@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "CMake: Configure",
+            "type": "shell",
+            "command": "cmake -S . -B build",
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "CMake: Build",
+            "type": "shell",
+            "command": "make -C build -j$(nproc)",
+            "dependsOn": "CMake: Configure",
+            "problemMatcher": ["$gcc"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
