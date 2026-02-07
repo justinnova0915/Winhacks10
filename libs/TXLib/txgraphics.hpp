@@ -4,7 +4,7 @@
 
 #pragma once
 #include "txlib.hpp"
-#include "libs/GLFW/include/glfw3.h"
+#include "GLFW/glfw3.h"
 
 // txglib ************************************************************************************************************** TXGLib
 namespace tx {
@@ -192,33 +192,159 @@ namespace tx {
 			Release = 1
 		};
 
+		class InitGLFW {
+		public:
+			InitGLFW() {}
+			InitGLFW(const Coord& in_windowDimension, const Coord& in_windowPos, const string& in_windowTitle) :
+				windowDimension(in_windowDimension), windowPos(in_windowPos), windowTitle(in_windowTitle)
+			{
+			}
+
+			bool operator()(GLFWwindow*& window) {
+				glfwWindowHint(GLFW_SAMPLES, 4);
+				//GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor(); // main monitor
+				//const GLFWvidmode* primaryMonitorMode = glfwGetVideoMode(primaryMonitor);
+				//window = glfwCreateWindow(primaryMonitorMode->width, primaryMonitorMode->height, "Project by TX_Jerry", primaryMonitor, NULL);
+
+				window = glfwCreateWindow(windowDimension.x(), windowDimension.y(), windowTitle.c_str(), NULL, NULL);
+				if (!window) {
+					glfwTerminate();
+					return 0;
+				}
+				glfwMakeContextCurrent(window);
+
+				glfwSetWindowPos(window, windowPos.x(), windowPos.x());
+				//glfwSetWindowPos(window, 0, 0);
+				return 1;
+			}
+
+			// =========================
+			// High-level getters
+			// =========================
+			const Coord& getWindowDimension() const noexcept {
+				return windowDimension;
+			}
+
+			const Coord& getWindowPos() const noexcept {
+				return windowPos;
+			}
+
+			const std::string& getWindowTitle() const noexcept {
+				return windowTitle;
+			}
+
+			// =========================
+			// High-level setters
+			// =========================
+			InitGLFW& setWindowDimension(const Coord& dim) noexcept {
+				windowDimension = dim;
+				return *this;
+			}
+
+			InitGLFW& setWindowPos(const Coord& pos) noexcept {
+				windowPos = pos;
+				return *this;
+			}
+
+			InitGLFW& setWindowTitle(const std::string& title) {
+				windowTitle = title;
+				return *this;
+			}
+
+			// =========================
+			// Low-level getters (primitive)
+			// =========================
+			int getWindowWidth() const noexcept {
+				return windowDimension.x();
+			}
+
+			int getWindowHeight() const noexcept {
+				return windowDimension.y();
+			}
+
+			int getWindowPosX() const noexcept {
+				return windowPos.x();
+			}
+
+			int getWindowPosY() const noexcept {
+				return windowPos.y();
+			}
+
+			// =========================
+			// Low-level setters (primitive)
+			// =========================
+			InitGLFW& setWindowWidth(int w) noexcept {
+				windowDimension.setX(w);
+				return *this;
+			}
+
+			InitGLFW& setWindowHeight(int h) noexcept {
+				windowDimension.setY(h);
+				return *this;
+			}
+
+			InitGLFW& setWindowPosX(int x) noexcept {
+				windowPos.setX(x);
+				return *this;
+			}
+
+			InitGLFW& setWindowPosY(int y) noexcept {
+				windowPos.setY(y);
+				return *this;
+			}
+
+			InitGLFW& setWindowSize(int w, int h) noexcept {
+				windowDimension.setX(w);
+				windowDimension.setY(h);
+				return *this;
+			}
+
+			InitGLFW& setWindowPos(int x, int y) noexcept {
+				windowPos.setX(x);
+				windowPos.setY(y);
+				return *this;
+			}
+		public:
+			Coord windowDimension = { 900, 900 }, windowPos = { 5, 42 };
+			string windowTitle = "TXStudio Project";
+		};
+
+
 		template<Mode mode, class UpdateCallback, class RenderCallback>
 		class Framework {
 		public:
 
-			template<class U, class R>
+			template<class U, class R, class GLFWInitializer = InitGLFW>
 			Framework(
 				U&& in_updateCallback,
 				R&& in_renderCallback,
+				GLFWInitializer in_initGLFW = InitGLFW{},
 				double in_FixedTickrate = 60.0,
 				double in_MaxAccumulatorMultiplier = 5.0) :
 				updateCb(std::forward<U>(in_updateCallback)),
 				renderCb(std::forward<R>(in_renderCallback)),
 				FixedTickrate(in_FixedTickrate),
 				TickIntervalTime(1.0 / FixedTickrate),
-				MaxAccumulatorTime(TickIntervalTime * in_MaxAccumulatorMultiplier)
+				MaxAccumulatorTime(TickIntervalTime* in_MaxAccumulatorMultiplier)
 			{
 				static_assert(std::is_invocable_v<U> || std::is_invocable_v<U, int>, "Update callback must have (int) or () as parameter. The provided callable was invalid.");
 				static_assert(std::is_invocable_v<R>, "Render call back must have no parameter. The provided callable was invalid.");
-				initGLFW();
+				this->valid = in_initGLFW(this->window);
 			}
 
 			void run() {
 				// Main Loop
-				timeBeginPeriod(1);
+				//timeBeginPeriod(1);
 				std::chrono::steady_clock::time_point last = std::chrono::steady_clock::now();
 				double accumulator = 0.0;
+				//cout << "main loop started\n";
+				if(!this->window){
+					cout << "[FatalError]: Invalid window token.\n";
+					return;
+				}
+				cout << this->window;
 				while (!glfwWindowShouldClose(this->window)) {
+					//cout << "iteration started\n";
 					if constexpr (mode == Mode::Release) {
 						std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
 						double tick_duration = std::chrono::duration<double>(now - last).count();
@@ -236,7 +362,7 @@ namespace tx {
 						this->callUpdateCallback(this->tickCounter);
 						this->tickCounter++;
 					}
-
+					//cout << "render starts\n";
 
 
 
@@ -250,14 +376,14 @@ namespace tx {
 					// render end
 					glEnd();
 
-
+					//cout << "swap buffer start\n";
 					glfwSwapBuffers(this->window);
 					glfwPollEvents();
 				}
 			}
 			~Framework() {
 				if (valid) {
-					timeEndPeriod(1);
+					//timeEndPeriod(1);
 					glfwTerminate();
 				}
 
@@ -275,29 +401,6 @@ namespace tx {
 
 			int tickCounter = 0;
 			bool valid = 1;
-
-			void initGLFW() {
-				if (!glfwInit()) {
-					this->valid = 0;
-					return;
-				}
-
-				glfwWindowHint(GLFW_SAMPLES, 4);
-				//GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor(); // main monitor
-				//const GLFWvidmode* primaryMonitorMode = glfwGetVideoMode(primaryMonitor);
-				//window = glfwCreateWindow(primaryMonitorMode->width, primaryMonitorMode->height, "Project by TX_Jerry", primaryMonitor, NULL);
-
-				this->window = glfwCreateWindow(900, 900, "Project by TX_Jerry", NULL, NULL);
-				if (!this->window) {
-					glfwTerminate();
-					this->valid = 0;
-					return;
-				}
-				glfwMakeContextCurrent(this->window);
-
-				glfwSetWindowPos(this->window, 5, 42);
-				//glfwSetWindowPos(window, 0, 0);
-			}
 
 			inline void callUpdateCallback(int tickCounter) {
 				if constexpr (std::is_invocable_v<UpdateCallback, int>) {
@@ -332,7 +435,7 @@ namespace tx {
 			);
 		}
 
-		
+
 
 
 

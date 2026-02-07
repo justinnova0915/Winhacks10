@@ -313,8 +313,8 @@ namespace tx {
 		inline It_t findIt_impl(const T& key) const {
 			return std::lower_bound(
 				m_beginIt, m_endIt, key,
-				[&cmp](const T& element, const T& key) {
-					return cmp(element, key);
+				[this](const T& element, const T& key) {
+					return this->cmp(element, key);
 				}
 			);
 		}

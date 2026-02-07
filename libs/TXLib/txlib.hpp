@@ -5,6 +5,17 @@
 #pragma once
 #include "header.h"
 
+using std::cout;
+using std::cin;
+using std::endl;
+using std::vector;
+using std::string;
+
+namespace std {
+	namespace fs = filesystem;
+}
+
+
 namespace tx {
 
 	constexpr float epsilon = 1e-6f;
@@ -271,14 +282,14 @@ namespace tx {
 	// Filesystem Functions **********************************************************************************************************
 	// fp stands for filePath
 
-	std::filesystem::path getExePath() {
-		char buffer[MAX_PATH];
-		GetModuleFileNameA(NULL, buffer, MAX_PATH);
-		return std::filesystem::path(buffer);
-	}
-	std::filesystem::path filePathInExeDir(const string& filename) {
-		return getExePath().parent_path() / filename;
-	}
+	// std::filesystem::path getExePath() {
+	// 	char buffer[MAX_PATH];
+	// 	GetModuleFileNameA(NULL, buffer, MAX_PATH);
+	// 	return std::filesystem::path(buffer);
+	// }
+	// std::filesystem::path filePathInExeDir(const string& filename) {
+	// 	return getExePath().parent_path() / filename;
+	// }
 	void readWholeFile(const std::filesystem::path& filePath, string& str) {
 		size_t fileSize = std::filesystem::file_size(filePath);
 
@@ -453,10 +464,10 @@ namespace tx {
 	namespace Time {
 
 		std::tm getTime() {
-			auto now = std::chrono::system_clock::now(); // µ±Ç°ÏµÍ³Ê±¼äµã
-			std::time_t time = std::chrono::system_clock::to_time_t(now); // ×ª³É C ·ç¸ñÊ±¼ä
+			auto now = std::chrono::system_clock::now(); // ï¿½ï¿½Ç°ÏµÍ³Ê±ï¿½ï¿½ï¿½
+			std::time_t time = std::chrono::system_clock::to_time_t(now); // ×ªï¿½ï¿½ C ï¿½ï¿½ï¿½Ê±ï¿½ï¿½
 			std::tm localnow;
-			localtime_s(&localnow, &time);
+			localtime_r(&time, &localnow);
 			return localnow;
 		}
 		string now(const char* format) {

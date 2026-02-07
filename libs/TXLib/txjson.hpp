@@ -44,9 +44,7 @@ namespace tx {
 		inline bool exist(const string& key) const { return members.exist(key); }
 
 		template<class T>
-		inline const T& getOr(const string& key, const T& fallback) const {
-			return (exist(key) ? members.at(key).get<T>() : fallback);
-		}
+		inline const T& getOr(const string& key, const T& fallback) const;
 
 		inline iterator       begin()       { return members.begin(); }
 		inline const_iterator begin() const { return members.begin(); }
@@ -124,6 +122,10 @@ namespace tx {
 		JT m_var;
 	};
 
+	template<class T>
+	inline const T& JsonObject::getOr(const string& key, const T& fallback) const {
+			return (exist(key) ? members.at(key).get<T>() : fallback);
+	}
 
 
 

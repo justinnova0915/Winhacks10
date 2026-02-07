@@ -3,7 +3,7 @@
 // File: TXLib_Math
 
 #pragma once
-#include "libs/TXLib/txlib.hpp"
+#include "txlib.hpp"
 
 namespace tx {
 
