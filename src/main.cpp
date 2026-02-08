@@ -47,9 +47,9 @@ class Application {
 		game.update();
 	}
 	void render() {
-		tx::Time::Timer timer;
+		//tx::Time::Timer timer;
 		game.render();
-		cout << timer.duration() << "ms" << endl;
+		//cout << timer.duration() << "ms" << endl;
 	}
 };
 

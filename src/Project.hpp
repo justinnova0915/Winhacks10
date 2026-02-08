@@ -296,7 +296,9 @@ public:
 		}
 	}
 
-	void set(TileType in) { m_type = in; }
+	void setType(TileType in) { m_type = in; }
+	// void setExtracter() {}
+	void setPos(const tx::Coord& in) { m_pos = in; }
 	TileType        type() const { return m_type; }
 	const tx::Coord& pos() const {return m_pos;}
 	bool operator==(const Tile& other) const { return this->m_type == other.m_type; }
@@ -306,7 +308,7 @@ public:
 	ConveyorSegment* getConveyor() const {return conveyer; }
 
 private:
-	TileType m_type;
+	TileType m_type = TileType::Space;
 	tx::Coord m_pos;
 	ConveyorSegment* conveyer = nullptr;
 };
@@ -326,6 +328,7 @@ public:
 		cout << "start init" << endl;
 
 		tiles.reinit(MapSize);
+		tiles.foreach([](Tile& in, const tx::Coord& pos) { in.setPos(pos); });
 		initJsonObject("./config/config.json", cfg);
 
 		cout << "start init assets..." << endl;
@@ -396,7 +399,7 @@ private:
 private:
 	// config
 	tx::JsonObject cfg;
-	int MapSize = 16;
+	int MapSize = 64;
 	float TileSize = 2.0f / MapSize;
 	inline static const tx::KVMap<TileType, string> assetNameMap = {
 		{TileType::Ore_Coal,   "coal"},
@@ -422,8 +425,9 @@ private:
 
 	void setOreTile_impl(const tx::Coord& pos, TileType type) {
 		if(!valid_impl(pos)) return;
-		tiles.at(pos).set(type);
-		ores.push_back(tiles.index(pos));
+		tiles.at(pos).setType(type);
+		int index = tiles.index(pos);
+		ores.push_back(index);
 	}
 
 
@@ -472,6 +476,8 @@ private:
 				setOreTiles(i, surroundingCircle);
 			}
 		}
+		std::sort(ores.begin(), ores.end());
+		ores.erase(std::unique(ores.begin(), ores.end()), ores.end());
 	}
 
 
@@ -510,7 +516,7 @@ private:
 		
 	// }
 	tx::vec2 getRenderPos(const tx::Coord& in) const {
-		return tx::toVec2(in) * TileSize;
+		return tx::toVec2(in) * TileSize - 1.0f;
 	}
 	void renderOres_impl(const Tile& tile) {
 		tx::PixelEngine::drawRGBmap(
@@ -576,28 +582,62 @@ private:
 	void initGroundTileMap(){
 		groundTileMap.reinit(MapSize);
 		
-		for(const tx::Coord& i : ores){
-			groundTileMap.at(i) = 1;
+		// tiles.foreach([](const Tile& in) {
+		// 	if(in.type() != TileType::Space){
+		// 		cout << in.pos() << endl;
+		// 	}
+		// });
+
+		for(id i : ores){ // ores are 1, grass are 0
+			groundTileMap.atIndex(i) = 1;
 		}
 		tx::Bitmap edge; edge.reserve(tx::sq(MapSize) * 0.4);
 		groundTileMap.foreach([&](id& in, const tx::Coord& pos) { // find edge
 			if(in) return;
 			for(uint8_t i = 0; i < 8; ++i){
-				if(groundTileMap.at(pos + tx::_8wayIncrement[i])){
+				tx::Coord adjacent = pos + tx::_8wayIncrement[i];
+				if(valid_impl(adjacent) && groundTileMap.at(adjacent)){
 					edge.emplace_back(pos);
 					break;
 				}
 			}
 		});
 
+		groundTileMap.foreach([&](id& in, const tx::Coord& pos) {
+			if(in){
+				in = getRandAsset("rock");
+			} else {
+				in = getRandAsset("grass");
+			}
+		});
 
+		for(const tx::Coord& i : edge){
+			groundTileMap.at(i) = assetIndexMap.at("groundEdge")[static_cast<int>(findGroundTileDir(i))];
+		}
 	}
-	CoordDirection findGroundTileDir(const tx::Bitmap& tiles) {
-
+	CoordDirection findGroundTileDir(const tx::Coord& tile) {
+		auto checkNoexcept = [&](const tx::Coord& in) -> bool {
+			if(!valid_impl(in)) return 0;
+			return groundTileMap.at(in);
+		};
+		if(checkNoexcept(tile + dirToCoord(CoordDirection::Top   )) && checkNoexcept(tile + dirToCoord(CoordDirection::Left ))) return CoordDirection::TopLeft;
+		if(checkNoexcept(tile + dirToCoord(CoordDirection::Top   )) && checkNoexcept(tile + dirToCoord(CoordDirection::Right))) return CoordDirection::TopRight;
+		if(checkNoexcept(tile + dirToCoord(CoordDirection::Bottom)) && checkNoexcept(tile + dirToCoord(CoordDirection::Left ))) return CoordDirection::BottomLeft;
+		if(checkNoexcept(tile + dirToCoord(CoordDirection::Bottom)) && checkNoexcept(tile + dirToCoord(CoordDirection::Right))) return CoordDirection::BottomRight;
+		if(checkNoexcept(tile + dirToCoord(CoordDirection::Top   ))) return CoordDirection::Top;
+		if(checkNoexcept(tile + dirToCoord(CoordDirection::Bottom))) return CoordDirection::Bottom;
+		if(checkNoexcept(tile + dirToCoord(CoordDirection::Left  ))) return CoordDirection::Left;
+		if(checkNoexcept(tile + dirToCoord(CoordDirection::Right ))) return CoordDirection::Right;
 	}
 
 	void renderGroundTiles(){
-
+		//cout << resources.size() << endl;
+		groundTileMap.foreach([&](id resId, const tx::Coord& pos) {
+			//cout << resId << endl;
+			tx::PixelEngine::drawRGBmap(
+				resources.at(resId),
+				getRenderPos(pos), TileSize);
+		});
 	}
 
 

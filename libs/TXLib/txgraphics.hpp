@@ -373,7 +373,7 @@ namespace tx {
 					//cout << "render starts\n";
 
 
-
+					
 					//glClearColor(0.80f, 9.0f, 1.0f, 1.0f);
 					glClear(GL_COLOR_BUFFER_BIT);
 					// render start

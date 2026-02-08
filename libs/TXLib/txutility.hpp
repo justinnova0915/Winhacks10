@@ -239,13 +239,13 @@ namespace tx {
 			for (int y = 0; y < gs.getHeight(); ++y) {
 				//cout << "row: " << y << "\n\n";
 				previousX = 0;
-				previous = gs.at(index);
+				previous = gs.atIndex(index);
 				for (int x = 0; x < gs.getWidth(); ++x) {
 					//cout << "col: " << x;
-					if (previous != gs.at(index)) {
+					if (previous != gs.atIndex(index)) {
 						// draw previous
 						drawRow(y, previousX, x - 1, modifierCallback(previous), gridSize, offset);
-						previous = gs.at(index);
+						previous = gs.atIndex(index);
 						previousX = x;
 					}
 					++index;
