@@ -547,6 +547,7 @@ private:
 			groundTileMap.at(i) = assetIndexMap.at("groundEdge")[static_cast<int>(findGroundTileDir(i))];
 		}
 	}
+<<<<<<< Updated upstream
 	CoordDirection findGroundTileDir(const tx::Coord& tile) {
 		auto checkNoexcept = [&](const tx::Coord& in) -> bool {
 			if(!valid_impl(in)) return 0;
@@ -560,6 +561,10 @@ private:
 		if(checkNoexcept(tile + dirToCoord(CoordDirection::Bottom))) return CoordDirection::Bottom;
 		if(checkNoexcept(tile + dirToCoord(CoordDirection::Left  ))) return CoordDirection::Left;
 		if(checkNoexcept(tile + dirToCoord(CoordDirection::Right ))) return CoordDirection::Right;
+=======
+	CoordDirection findGroundTileDir(const tx::Bitmap& tiles) {
+		
+>>>>>>> Stashed changes
 	}
 
 	void renderGroundTiles(){
