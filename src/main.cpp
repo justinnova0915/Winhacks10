@@ -14,7 +14,9 @@ class Application {
 			ptr->render();
 		}
 	};
-	tx::RE::Framework<tx::RE::Mode::Release, UpdateFunc, RenderFunc> Framework{UpdateFunc{this}, RenderFunc{this}};
+	tx::RE::Framework<tx::RE::Mode::Release, UpdateFunc, RenderFunc> Framework{UpdateFunc{this}, RenderFunc{this}, 
+	tx::RE::InitGLFW{tx::Coord{1500, 1500}, {}, {}}	
+};
 
   public:
 	void run() {
@@ -38,9 +40,14 @@ class Application {
 
   private:
 	void onKeyEvent(GLFWwindow* window, int key, int scancode, int action, int mods) {
-		if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+		if (action == GLFW_PRESS) {
 			switch (key) {
-
+				case GLFW_KEY_1:
+					game.setPlacementMode(0);  // Conveyor mode
+					break;
+				case GLFW_KEY_2:
+					game.setPlacementMode(1);  // Extractor mode
+					break;
 			}
 		}
 	}

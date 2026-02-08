@@ -16,6 +16,41 @@
 		"iron":        [ "iron/iron1.bmp", "iron/iron2.bmp" ],
 		"grass":       [ "ground/grass01.bmp", "ground/grass02.bmp", "ground/grass03.bmp", "ground/grass04.bmp", "ground/grass05.bmp", "ground/grass06.bmp", "ground/grass07.bmp", "ground/grass08.bmp", "ground/grass09.bmp" ],
 		"rock":        [ "ground/rock01.bmp", "ground/rock02.bmp", "ground/rock03.bmp" ],
-		"groundEdge":  [ "ground/grass_right.bmp", "ground/grass_left.bmp", "ground/grass_top.bmp", "ground/grass_bottom.bmp", "ground/grass_topLeft.bmp", "ground/grass_topRight.bmp", "ground/grass_bottomLeft.bmp", "ground/grass_bottomRight.bmp" ]
+		"groundEdge":  [ "ground/grass_right.bmp", "ground/grass_left.bmp", "ground/grass_top.bmp", "ground/grass_bottom.bmp", "ground/grass_topLeft.bmp", "ground/grass_topRight.bmp", "ground/grass_bottomLeft.bmp", "ground/grass_bottomRight.bmp" ],
+		"conveyor_horizontal": [ 
+            "conveyor/horizontal/horizontalStraight1.bmp",
+            "conveyor/horizontal/horizontalStraight2.bmp",
+            "conveyor/horizontal/horizontalStraight3.bmp",
+            "conveyor/horizontal/horizontalStraight4.bmp"
+        ],
+		"conveyor_vertical": [ 
+            "conveyor/vertical/verticalStraight1.bmp",
+            "conveyor/vertical/verticalStraight2.bmp",
+            "conveyor/vertical/verticalStraight3.bmp",
+            "conveyor/vertical/verticalStraight4.bmp"
+        ],
+		"conveyor_corner_up": [ 
+            "conveyor/corner/cornerUp/cornerUpt1.bmp",
+            "conveyor/corner/cornerUp/cornerUpt2.bmp",
+            "conveyor/corner/cornerUp/cornerUpt3.bmp",
+            "conveyor/corner/cornerUp/cornerUpt4.bmp"
+        ],
+		"conveyor_corner_down": [ 
+            "conveyor/corner/cornerDown/cornerDownt1.bmp",
+            "conveyor/corner/cornerDown/cornerDownt2.bmp",
+            "conveyor/corner/cornerDown/cornerDownt3.bmp",
+            "conveyor/corner/cornerDown/cornerDownt4.bmp"
+        ],
+		"extractor": [
+            "extractor/extractor1.bmp",
+            "extractor/extractor2.bmp",
+            "extractor/extractor3.bmp",
+            "extractor/extractor4.bmp",
+            "extractor/extractor5.bmp",
+            "extractor/extractor6.bmp",
+            "extractor/extractor7.bmp",
+            "extractor/extractor8.bmp",
+            "extractor/extractor9.bmp"
+        ]
 	}
 }

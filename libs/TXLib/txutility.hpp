@@ -282,6 +282,55 @@ namespace tx {
 		static void drawRGBmap(GridSystem<RGB>& gs, const vec2& pos = BottomLeft, float mapSize = 2.0f) {
 			draw(gs, [](const RGB& in) -> const RGB& { return in; }, pos, mapSize);
 		}
+		// Draw a square portion of an RGBmap (uses height as the square size, ignores extra width)
+		static void drawRGBmapSquare(GridSystem<RGB>& gs, const vec2& pos, float targetSize) {
+			int squareSize = gs.getHeight();  // Use height as the square dimension
+			float pixelSize = targetSize / squareSize;
+			
+			for (int y = 0; y < squareSize; ++y) {
+				int previousX = 0;
+				RGB previous = gs.at(0, y);
+				for (int x = 0; x < squareSize; ++x) {  // Only iterate up to squareSize (ignore extra width)
+					RGB current = gs.at(x, y);
+					if (previous != current) {
+						// Draw previous run
+						tx::glColorRGB(previous);
+						float left = pos.x() + previousX * pixelSize;
+						float bottom = pos.y() + y * pixelSize;
+						tx::drawRectP(vec2{left, bottom}, (x - previousX) * pixelSize, pixelSize);
+						previous = current;
+						previousX = x;
+					}
+				}
+				// Draw last run of the row
+				tx::glColorRGB(previous);
+				float left = pos.x() + previousX * pixelSize;
+				float bottom = pos.y() + y * pixelSize;
+				tx::drawRectP(vec2{left, bottom}, (squareSize - previousX) * pixelSize, pixelSize);
+			}
+		}
+		// Draw a square portion of an RGBmap with optional X/Y flipping
+		static void drawRGBmapSquareFlipped(GridSystem<RGB>& gs, const vec2& pos, float targetSize, bool flipX, bool flipY) {
+			int squareSize = gs.getHeight();  // Use height as the square dimension
+			float pixelSize = targetSize / squareSize;
+			
+			for (int y = 0; y < squareSize; ++y) {
+				// Determine actual Y coordinate based on flip
+				int srcY = flipY ? (squareSize - 1 - y) : y;
+				
+				for (int x = 0; x < squareSize; ++x) {
+					// Determine actual X coordinate based on flip
+					int srcX = flipX ? (squareSize - 1 - x) : x;
+					
+					RGB color = gs.at(srcX, srcY);
+					tx::glColorRGB(color);
+					
+					float left = pos.x() + x * pixelSize;
+					float bottom = pos.y() + y * pixelSize;
+					tx::drawRectP(vec2{left, bottom}, pixelSize, pixelSize);
+				}
+			}
+		}
 		static constexpr inline float getGridSize(int in_sideLen) { return 2.0f / in_sideLen; }
 
 	};

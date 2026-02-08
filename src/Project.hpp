@@ -270,6 +270,9 @@ class ConveyorSegment{
 
         tx::vec2 p1 = {0, 0}, p2 = {0, 0};
 		tx::vec2 center = { 0, 0 };
+		tx::Coord tilePos = {0, 0};  // Grid position of this segment
+		CoordDirection direction = CoordDirection::Right;  // Output direction of conveyor
+		CoordDirection inputDirection = CoordDirection::None;  // Input direction (where items come from)
 
         // Check if a new entity of given size can enter (entry is at distance 0)
         bool isEntryBlocked(float incomingSize = 0.2f) const {
@@ -281,17 +284,49 @@ class ConveyorSegment{
         }
 };
 
-
-
-
-
-
 enum class TileType{
     Space,
     Ore_Iron,
     Ore_Copper,
     Ore_Coal,
     Ore_Gold
+};
+
+// Extractor: placed on ore tiles, outputs items to adjacent conveyor
+class Extractor {
+public:
+    tx::Coord pos = {0, 0};
+    CoordDirection outputDir = CoordDirection::Right;
+    TileType oreType = TileType::Space;
+    
+    float extractTimer = 0.0f;
+    float extractInterval = 1.0f;  // seconds between extractions
+    
+    // Called each frame with the output conveyor (found by Game class)
+    void update(float dt, ConveyorSegment* outputBelt) {
+        extractTimer += dt;
+        if (extractTimer >= extractInterval) {
+            extractTimer -= extractInterval;
+            
+            if (!outputBelt) return;
+            
+            // Try to output an entity
+            if (!outputBelt->isEntryBlocked(0.2f)) {
+                Entity newEntity;
+                newEntity.distance = 0.0f;
+                newEntity.size = 0.2f;
+                // Set ID based on ore type for sprite selection
+                switch (oreType) {
+                    case TileType::Ore_Coal:   newEntity.id = 0; break;
+                    case TileType::Ore_Copper: newEntity.id = 1; break;
+                    case TileType::Ore_Gold:   newEntity.id = 2; break;
+                    case TileType::Ore_Iron:   newEntity.id = 3; break;
+                    default: newEntity.id = 0; break;
+                }
+                outputBelt->entities.push_back(newEntity);
+            }
+        }
+    }
 };
 
 class Tile {
@@ -352,6 +387,46 @@ public:
 
     void update() {
         updateConveyor(0.016f);
+        updateExtractors(0.016f);
+        
+        // Update conveyor animation
+        conveyorAnimTimer += 0.016f;
+        if (conveyorAnimTimer >= 1.0f / CONVEYOR_ANIM_SPEED) {
+            conveyorAnimTimer -= 1.0f / CONVEYOR_ANIM_SPEED;
+            conveyorAnimFrame = (conveyorAnimFrame + 1) % CONVEYOR_ANIM_FRAMES;
+        }
+    }
+    
+    void updateExtractors(float dt) {
+        for (auto& extractor : extractors) {
+            // Find adjacent conveyor dynamically
+            ConveyorSegment* outputBelt = findAdjacentConveyor(extractor.pos);
+            extractor.update(dt, outputBelt);
+        }
+    }
+    
+    ConveyorSegment* findAdjacentConveyor(const tx::Coord& pos) {
+        static const tx::Coord offsets[] = {
+            {1, 0}, {-1, 0}, {0, 1}, {0, -1}
+        };
+        
+        for (const auto& offset : offsets) {
+            tx::Coord neighborPos = pos + offset;
+            
+            if (neighborPos.x() >= 0 && neighborPos.x() < MapSize &&
+                neighborPos.y() >= 0 && neighborPos.y() < MapSize) {
+                ConveyorSegment* neighbor = tiles.at(neighborPos).getConveyor();
+                if (neighbor) {
+                    return neighbor;
+                }
+            }
+        }
+        return nullptr;
+    }
+    
+    // Set placement mode: 0 = Conveyor, 1 = Extractor
+    void setPlacementMode(int mode) {
+        placementMode = (mode == 0) ? PlacementMode::Conveyor : PlacementMode::Extractor;
     }
 
     void render(){
@@ -380,10 +455,80 @@ public:
 
         // 3. LAYER 3: The Conveyor Belts (Draw these ON TOP of the ground)
         for (const auto& seg : conveyorBelts) {
-            // Draw Belt Line
-            tx::glColorRGB(tx::RGB(255, 255, 255));
-            tx::drawLine(seg.p1, seg.p2);
-			tx::drawLine(seg.center, seg.p2);
+            // Draw conveyor sprite based on direction
+            tx::vec2 renderPos = getRenderPos(seg.tilePos);
+            
+            // Helper to check if direction is horizontal
+            auto isHorizontal = [](CoordDirection d) {
+                return d == CoordDirection::Left || d == CoordDirection::Right;
+            };
+            auto isVertical = [](CoordDirection d) {
+                return d == CoordDirection::Top || d == CoordDirection::Bottom;
+            };
+            
+            // Determine sprite based on input/output directions
+            string spriteName;
+            bool reverseAnim = false;  // Whether to play animation backwards
+            bool flipX = false;  // Mirror sprite horizontally
+            bool flipY = false;  // Mirror sprite vertically
+            
+            bool isCorner = seg.inputDirection != CoordDirection::None &&
+                           ((isHorizontal(seg.inputDirection) && isVertical(seg.direction)) ||
+                            (isVertical(seg.inputDirection) && isHorizontal(seg.direction)));
+            
+            if (isCorner) {
+                // Corner sprites default: output going RIGHT, animation flows toward right
+                // corner_up: curves upward (input from bottom OR output to top)
+                // corner_down: curves downward (input from top OR output to bottom)
+                
+                // Determine which corner sprite based on vertical component
+                if (seg.direction == CoordDirection::Top || seg.inputDirection == CoordDirection::Bottom) {
+                    spriteName = "conveyor_corner_up";
+                } else {
+                    spriteName = "conveyor_corner_down";
+                }
+                
+                // Flip sprite X and reverse animation when output goes LEFT or input is from LEFT
+                // (because default is output RIGHT / input from vertical side)
+                if (seg.direction == CoordDirection::Left || seg.inputDirection == CoordDirection::Left) {
+                    flipX = true;
+                    reverseAnim = true;
+                }
+            } else {
+                // Straight piece - NO sprite flipping, only animation reversal
+                switch (seg.direction) {
+                    case CoordDirection::Left:
+                        spriteName = "conveyor_horizontal";
+                        reverseAnim = true;  // Reverse animation for left
+                        break;
+                    case CoordDirection::Right:
+                        spriteName = "conveyor_horizontal";
+                        // Normal animation for right
+                        break;
+                    case CoordDirection::Top:
+                        spriteName = "conveyor_vertical";
+                        // Normal animation for up
+                        break;
+                    case CoordDirection::Bottom:
+                        spriteName = "conveyor_vertical";
+                        reverseAnim = true;  // Reverse animation for down
+                        break;
+                    default:
+                        spriteName = "conveyor_horizontal";
+                        break;
+                }
+            }
+            
+            // Get animation frame sprite
+            const vector<id>& frames = assetIndexMap.at(spriteName);
+            // When reversed, play animation backwards
+            int frameIndex = reverseAnim ? 
+                (CONVEYOR_ANIM_FRAMES - 1 - (conveyorAnimFrame % frames.size())) : 
+                (conveyorAnimFrame % frames.size());
+            id spriteId = frames[frameIndex % frames.size()];
+            
+            // Draw sprite (with flip for corners only)
+            tx::PixelEngine::drawRGBmapSquareFlipped(resources.at(spriteId), renderPos, TileSize, flipX, flipY);
 
             // Draw Entities (Items) - smooth interpolation along segment
             for (const auto& entity : seg.entities) {
@@ -402,12 +547,33 @@ public:
                     pos = seg.center + (seg.p2 - seg.center) * localT;
                 }
 
-                tx::glColorRGB(tx::RGB(255, 50, 50));
-                tx::drawCircle(pos, TileSize * 0.4f);
+                // Draw ore sprite centered on position
+                float itemSize = TileSize * 0.6f;
+                tx::vec2 itemPos = pos - tx::vec2{ itemSize / 2, itemSize / 2 };
+                
+                // Use entity.id to pick ore type (cycle through available ores)
+                static const string oreNames[] = {"coal", "copper", "gold", "iron"};
+                const string& oreName = oreNames[entity.id % 4];
+                const vector<id>& oreFrames = assetIndexMap.at(oreName);
+                id oreSpriteId = oreFrames[entity.id % oreFrames.size()];
+                
+                tx::PixelEngine::drawRGBmapSquare(resources.at(oreSpriteId), itemPos, itemSize);
             }
         }
 
-        // 4. LAYER 4: The Ghost Preview (UI always goes LAST/ON TOP)
+        // 4. LAYER 4: Extractors
+        for (const auto& extractor : extractors) {
+            tx::vec2 renderPos = getRenderPos(extractor.pos);
+            
+            // Get animated extractor sprite (9 frames)
+            const vector<id>& frames = assetIndexMap.at("extractor");
+            int frameIndex = conveyorAnimFrame % frames.size();  // Use conveyor anim timer
+            id spriteId = frames[frameIndex];
+            
+            tx::PixelEngine::drawRGBmapSquare(resources.at(spriteId), renderPos, TileSize);
+        }
+
+        // 5. LAYER 5: The Ghost Preview (UI always goes LAST/ON TOP)
         if (isDragging) {
             auto ghostPath = calculatePath(dragStart, dragEnd);
             for (const auto& step : ghostPath) {
@@ -432,10 +598,22 @@ public:
 private:
     // runtime data
     std::list<ConveyorSegment> conveyorBelts;
+    std::list<Extractor> extractors;
+    
+    // Placement mode
+    enum class PlacementMode { Conveyor, Extractor };
+    PlacementMode placementMode = PlacementMode::Conveyor;
+    
     struct BuildStep {
         tx::Coord pos;
         CoordDirection dir;
     };
+
+    // Animation
+    float conveyorAnimTimer = 0.0f;
+    int conveyorAnimFrame = 0;
+    static constexpr int CONVEYOR_ANIM_FRAMES = 4;
+    static constexpr float CONVEYOR_ANIM_SPEED = 8.0f;  // frames per second
 
     // Grid tracking conveyor directions for each tile (None = no conveyor)
     tx::GridSystem<CoordDirection> conveyorDirections;
@@ -450,7 +628,7 @@ private:
 private:
     // config
     tx::JsonObject cfg;
-    int MapSize = 64;
+    int MapSize = 16;
     float TileSize = 2.0f / MapSize;
     inline static const tx::KVMap<TileType, string> assetNameMap = {
         {TileType::Ore_Coal,   "coal"},
@@ -714,6 +892,8 @@ private:
         conveyorBelts.emplace_back();
         ConveyorSegment* newSeg = &conveyorBelts.back();
         newSeg->length = 1.0f;
+        newSeg->tilePos = pos;  // Store tile position
+        newSeg->direction = dir;  // Store direction for sprite selection
 
         // Calculate Geometry
         tx::vec2 tileCorner = getRenderPos(pos);
@@ -754,6 +934,10 @@ private:
                 // 2. Link them to us
                 prev->nextsegment = newSeg;
                 
+                // 3. Record our input direction (opposite of where the prev segment is)
+                // If prev is to our left, input comes from left, etc.
+                newSeg->inputDirection = static_cast<CoordDirection>(i);
+                
                 // (We break after the first input found to keep it simple)
                 break; 
             }
@@ -771,7 +955,20 @@ private:
                 // AUTO-CORNER LOGIC:
                 // Snap their Start (p1) to our End (p2).
                 // This dynamically turns a straight belt into a corner if we side-load it!
-                target->p1 = newSeg->p2; 
+                target->p1 = newSeg->p2;
+                
+                // Update target's input direction (opposite of our direction = direction we're coming from)
+                // We're at 'pos', target is at 'targetPos', so target's input comes from direction opposite to 'dir'
+                // Actually, the input direction is where we are relative to target
+                // We placed at 'pos', and we point to 'targetPos', so from target's perspective, input comes from 'pos'
+                // That means input direction is the opposite of 'dir'
+                switch (dir) {
+                    case CoordDirection::Right: target->inputDirection = CoordDirection::Left; break;
+                    case CoordDirection::Left: target->inputDirection = CoordDirection::Right; break;
+                    case CoordDirection::Top: target->inputDirection = CoordDirection::Bottom; break;
+                    case CoordDirection::Bottom: target->inputDirection = CoordDirection::Top; break;
+                    default: break;
+                }
             }
         }
     }
@@ -835,35 +1032,53 @@ public:
         tx::Coord gridPos = { gridX, gridY };
 
         // --- 3. LOGIC ---
-        if (isDown && !isDragging) {
-            isDragging = true;
-            dragStart = gridPos;
-        }
-
-        if (isDragging) {
-            dragEnd = gridPos;
-        }
-
-        if (isRelease && isDragging) {
-            auto path = calculatePath(dragStart, dragEnd);
-            for (const auto& step : path) {
-                placeConveyor(step.pos, step.dir);
+        if (placementMode == PlacementMode::Conveyor) {
+            // Conveyor placement mode: drag to place conveyors
+            if (isDown && !isDragging) {
+                isDragging = true;
+                dragStart = gridPos;
             }
-            
-            // Spawn an Entity on the first segment of the newly placed conveyor
-            if (!path.empty()) {
-                ConveyorSegment* firstSeg = tiles.at(path[0].pos).getConveyor();
-                if (firstSeg && !firstSeg->isEntryBlocked(0.2f)) {
-                    Entity newEntity;
-                    newEntity.distance = 0.0f;
-                    newEntity.size = 0.2f;
-                    newEntity.id = 1;
-                    firstSeg->entities.push_back(newEntity);
+
+            if (isDragging) {
+                dragEnd = gridPos;
+            }
+
+            if (isRelease && isDragging) {
+                auto path = calculatePath(dragStart, dragEnd);
+                for (const auto& step : path) {
+                    placeConveyor(step.pos, step.dir);
                 }
+                isDragging = false;
             }
-            
-            isDragging = false;
+        } else if (placementMode == PlacementMode::Extractor) {
+            // Extractor placement mode: click on ore tile to place extractor
+            if (isRelease) {
+                placeExtractor(gridPos);
+            }
         }
+    }
+    
+    void placeExtractor(const tx::Coord& pos) {
+        Tile& tile = tiles.at(pos);
+        
+        // Can only place extractors on ore tiles
+        if (tile.type() == TileType::Space) {
+            return;  // Not an ore tile
+        }
+        
+        // Check if there's already an extractor here
+        for (const auto& ext : extractors) {
+            if (ext.pos == pos) {
+                return;  // Already has extractor
+            }
+        }
+        
+        // Create the extractor - it will dynamically find adjacent conveyors
+        Extractor newExtractor;
+        newExtractor.pos = pos;
+        newExtractor.oreType = tile.type();
+        
+        extractors.push_back(newExtractor);
     }
 };
 
@@ -973,11 +1188,6 @@ private:
         float radiusSq = tx::sq(domainRadius);
         return distSq <= radiusSq;
     }
-
-
-
-
-
 
 
 };
