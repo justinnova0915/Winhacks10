@@ -21,15 +21,15 @@ void initJsonObject(const std::filesystem::path& filePath, tx::JsonObject& root)
 	cout << "init json done.\n";
 }
 
-enum class CoordDirection {
-    Right,        // 0
-    Left,         // 1
-    Top,          // 2
-    Bottom,       // 3
-    TopRight,     // 4
-    TopLeft,      // 5
-    BottomLeft,   // 6
-    BottomRight   // 7
+enum class CoordDirection : uint16_t {
+    Right       = 0,        
+    Left        = 1,         
+    Top         = 2,          
+    Bottom      = 3,       
+    TopRight    = 4,     
+    TopLeft     = 5,      
+    BottomLeft  = 6,   
+    BottomRight = 7   
 };
 constexpr tx::Coord dirToCoord(CoordDirection dir) {
     return tx::_8wayIncrement[static_cast<int>(dir)];
@@ -335,8 +335,7 @@ public:
 		initAssets();
 		cout << "init assets done." << endl;
 		genOreTiles_impl();
-		cout << "initing conveyor test";
-		initTestConveyors();
+		initGroundTileMap();
 	}
 
 	void update() {
@@ -359,21 +358,9 @@ public:
 		// // 	return tx::getBWColor(!(in.type() == TileType::Space));
 		// // });
 
-		// for(id i : ores){
-		// 	renderOres_impl(tiles.atIndex(i));
-		// }
-
-		for (const auto& seg: conveyorBelts) {
-			tx::glColorRGB(tx::RGB(255, 255, 255));
-			tx::drawLine(seg.p1, seg.p2);
-
-			for (const auto& entity: seg.entities) {
-				float t = entity.distance / seg.length;
-				tx::vec2 pos = seg.p1 + (seg.p2 - seg.p1) * t;
-
-				tx::glColorRGB(tx::RGB(255, 0, 0));
-				tx::drawCircle(pos, 0.05f);
-			}
+		renderGroundTiles();
+		for(id i : ores){
+			renderOres_impl(tiles.atIndex(i));
 		}
 
 
