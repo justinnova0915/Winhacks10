@@ -115,6 +115,9 @@ namespace tx {
 			topLeft.offsetY(-height)
 		);
 	}
+	void drawRect(const vec2& topLeft, const vec2& dimensions) {
+		drawRect(topLeft, dimensions.x(), dimensions.y());
+	}
 	void drawRectP(const vec2& bottomLeft, float width, float height) {
 		drawQuad(
 			bottomLeft.offsetY(height),

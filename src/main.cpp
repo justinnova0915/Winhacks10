@@ -23,7 +23,13 @@ class Application {
 
   public:
 	Application() {
+		GLFWwindow* window = Framework.getWindow();
 		tx::glfwSetKeyCallback<Application, &Application::onKeyEvent>(Framework.getWindow(), this);
+		
+		glfwSetWindowUserPointer(window, this); 
+        glfwSetMouseButtonCallback(window, &Application::onMouseButton);
+        glfwSetCursorPosCallback(window, &Application::onMouseMove);
+		
 		tx::glEnableTransparent();
 	}
 	~Application() {
@@ -38,6 +44,33 @@ class Application {
 			}
 		}
 	}
+
+	static void onMouseButton(GLFWwindow* window, int button, int action, int mods) {
+        // Get the "Application" instance from the window
+        Application* app = (Application*)glfwGetWindowUserPointer(window);
+        
+        if (app && button == GLFW_MOUSE_BUTTON_LEFT) {
+            double x, y;
+            glfwGetCursorPos(window, &x, &y);
+            
+            int w, h;
+            glfwGetWindowSize(window, &w, &h);
+            
+            // Send to Game: isDown = Press, isRelease = Release
+            app->game.onMouseEvent((float)x, (float)y, (action == GLFW_PRESS), (action == GLFW_RELEASE), w, h);
+        }
+    }
+
+    static void onMouseMove(GLFWwindow* window, double x, double y) {
+        Application* app = (Application*)glfwGetWindowUserPointer(window);
+        if (app) {
+            int w, h;
+            glfwGetWindowSize(window, &w, &h);
+            
+            // Send movement updates (isDown and isRelease are false here)
+            app->game.onMouseEvent((float)x, (float)y, false, false, w, h);
+        }
+    }
 
   private:
 	Game game;
