@@ -161,10 +161,10 @@ namespace tx {
 		{  1, -1 }
 	};
 	constexpr Coord _4wayIncrement[] = {
-		{  1,  0 },
-		{ -1,  0 },
-		{  0,  1 },
-		{  0, -1 }
+		{  1,  0 }, // right
+		{ -1,  0 }, // left
+		{  0,  1 }, // top
+		{  0, -1 }  // bottom
 	};
 	constexpr int _2wayIncrement[] = {
 		1, -1
