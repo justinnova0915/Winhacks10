@@ -44,7 +44,7 @@ class Application {
 
 
 	void update() {
-
+		game.update();
 	}
 	void render() {
 		tx::Time::Timer timer;

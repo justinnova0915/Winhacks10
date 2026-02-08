@@ -216,15 +216,62 @@ RGBMap readBMP(const std::fs::path& fp) {
 	return map;
 }
 
+struct Entity {
+	float distance = 0.0f;
+	float size = 1.0f;
+	uint16_t id = 0;
+};
 
+class ConveyorSegment{
+	public:
 
+		void update(float dt, float speed) {
+			if (entities.empty()) return;
 
+			Entity& head = entities.front();
+			head.distance += speed * dt;
 
+			if (head.distance >= length) {
+				if (nextsegment && !nextsegment->isEntryBlocked()) {
+					Entity transfer = head;
+					transfer.distance = 0.0f;
+					nextsegment->entities.push_back(transfer);
 
+					entities.pop_front();
 
+					if (entities.empty()) return;
+				} else {
+					head.distance = length;
+				}
+			}
 
-class Data_Conveyer{
+			for (size_t i = 1; i < entities.size(); i++) {
+				Entity& current = entities[i];
+				Entity& ahead = entities[i-1];
 
+				current.distance += speed * dt;
+
+				float limit = ahead.distance - ahead.size;
+
+				if (current.distance > limit) {
+					current.distance = limit;
+				}
+			}
+		}
+
+		float length = 1.0f;
+		ConveyorSegment* nextsegment = nullptr;
+
+		std::deque<Entity> entities;
+		vector<tx::Coord> WayPoints;
+
+		tx::vec2 p1 = {0, 0}, p2 = {0, 0};
+
+		bool isEntryBlocked() const {
+			if (entities.empty()) return false;
+			const Entity& last = entities.back();
+			return last.distance < last.size;
+		}
 };
 
 
@@ -254,15 +301,14 @@ public:
 	const tx::Coord& pos() const {return m_pos;}
 	bool operator==(const Tile& other) const { return this->m_type == other.m_type; }
 	bool operator!=(const Tile& other) const { return this->m_type != other.m_type; }
+
+	void setConveyor(ConveyorSegment* ptr) {conveyer = ptr; }
+	ConveyorSegment* getConveyor() const {return conveyer; }
+
 private:
 	TileType m_type;
 	tx::Coord m_pos;
-
-	Data_Conveyer* conveyer = nullptr;
-	
-
-
-
+	ConveyorSegment* conveyer = nullptr;
 };
 
 
@@ -286,10 +332,12 @@ public:
 		initAssets();
 		cout << "init assets done." << endl;
 		genOreTiles_impl();
+		cout << "initing conveyor test";
+		initTestConveyors();
 	}
 
-	void update(){
-
+	void update() {
+		updateConveyor(0.016f);
 	}
 
 	void render(){
@@ -308,8 +356,21 @@ public:
 		// // 	return tx::getBWColor(!(in.type() == TileType::Space));
 		// // });
 
-		for(id i : ores){
-			renderOres_impl(tiles.atIndex(i));
+		// for(id i : ores){
+		// 	renderOres_impl(tiles.atIndex(i));
+		// }
+
+		for (const auto& seg: conveyorBelts) {
+			tx::glColorRGB(tx::RGB(255, 255, 255));
+			tx::drawLine(seg.p1, seg.p2);
+
+			for (const auto& entity: seg.entities) {
+				float t = entity.distance / seg.length;
+				tx::vec2 pos = seg.p1 + (seg.p2 - seg.p1) * t;
+
+				tx::glColorRGB(tx::RGB(255, 0, 0));
+				tx::drawCircle(pos, 0.05f);
+			}
 		}
 
 
@@ -319,6 +380,16 @@ public:
 
 private:
 	// runtime data
+	std::list<ConveyorSegment> conveyorBelts;
+	struct BuildStep {
+		tx::Coord pos;
+		CoordDirection dir;
+	};
+
+	bool isDraggin = false;
+	tx::Coord dragStart = {0, 0};
+	tx::Coord dragEnd = {0, 0};
+
 	tx::GridSystem<Tile> tiles;
 	vector<id> ores;
 
@@ -342,17 +413,18 @@ private:
 	std::uniform_int_distribution<int> dist_map{0, MapSize - 1};
 	std::uniform_int_distribution<int> dist_np{-1, 1};
 	
-
+	void updateConveyor(float dt) {
+		for (auto& segment: conveyorBelts) {
+			float speed = 2.0f;
+			segment.update(dt, speed);
+		}
+	}
 
 	void setOreTile_impl(const tx::Coord& pos, TileType type) {
 		if(!valid_impl(pos)) return;
 		tiles.at(pos).set(type);
 		ores.push_back(tiles.index(pos));
 	}
-
-	
-
-
 
 
 
@@ -529,7 +601,102 @@ private:
 	}
 
 
+	void initTestConveyors() {
+		placeConveyor({2, 2}, CoordDirection::Right);
+		placeConveyor({3, 2}, CoordDirection::Right);
 
+		if (tiles.at({2, 2}).getConveyor()) {
+			Entity item;
+            item.distance = 0.0f;
+            item.size = 0.2f;
+            item.id = 1;
+            tiles.at({2,2}).getConveyor()->entities.push_back(item);
+		}
+	}
+
+	void placeConveyor(tx::Coord pos, CoordDirection dir) {
+		if (!valid_impl(pos)) return;
+
+		conveyorBelts.emplace_back();
+		ConveyorSegment* newSeg = &conveyorBelts.back();
+		newSeg->length = 1.0f;
+
+		tx::vec2 tileCorner = getRenderPos(pos);
+		float halfSize = TileSize / 2.0f;
+		tx::vec2 center = tileCorner + tx::vec2{halfSize, halfSize};
+
+		tx::Coord delta = dirToCoord(dir);
+		tx::vec2 dirVec = {(float)delta.x(), (float)delta.y()};
+
+		newSeg->p1 = center - (dirVec * halfSize);
+		newSeg->p2 = center + (dirVec * halfSize);
+
+		tiles.at(pos).setConveyor(newSeg);
+
+		tx::Coord neighbourPos = pos + delta;
+        if (valid_impl(neighbourPos)) {
+            ConveyorSegment* neighbour = tiles.at(neighbourPos).getConveyor();
+            if (neighbour != nullptr) {
+                tx::vec2 diff = newSeg->p2 - neighbour->p1;
+                float distSq = tx::sq(diff.x()) + tx::sq(diff.y());
+                if (distSq < 0.01f) {
+                     newSeg->nextsegment = neighbour;
+                }
+            }
+        }
+
+		for(int i = 0; i < 4; ++i) {
+            tx::Coord checkPos = pos + dirToCoord(static_cast<CoordDirection>(i));
+            if (!valid_impl(checkPos)) continue;
+
+            ConveyorSegment* prev = tiles.at(checkPos).getConveyor();
+            if (prev != nullptr) {
+                tx::vec2 diff = prev->p2 - newSeg->p1;
+                float distSq = tx::sq(diff.x()) + tx::sq(diff.y());
+                
+                if (distSq < 0.01f) {
+                    prev->nextsegment = newSeg;
+                }
+            }
+        }
+	}
+
+	std::vector<BuildStep> calculatePath(tx::Coord start, tx::Coord end) {
+		std::vector<BuildStep> path;
+		int dx = end.x() - start.x();
+		int dy = end.y() - start.y();
+
+		tx::Coord current = start;
+
+		int xSteps = std::abs(dx);
+		CoordDirection xDir = (dx > 0) ? CoordDirection::Right : CoordDirection::Left;
+
+		for (int i = 0; i < xSteps; i++) {
+			CoordDirection dir = xDir;
+			if (i == xSteps - 1 && dy != 0) {
+				dir = (dy > 0) ? CoordDirection::Bottom : CoordDirection::Top;
+			}
+			path.push_back({current, dir});
+			current = current + dirToCoord(xDir);
+		}
+
+		int ySteps = std::abs(dy);
+        CoordDirection yDir = (dy > 0) ? CoordDirection::Bottom : CoordDirection::Top;
+
+        for (int i = 0; i < ySteps; ++i) {
+            path.push_back({current, yDir});
+            current = current + dirToCoord(yDir);
+        }
+
+		if (path.empty()) {
+            path.push_back({start, CoordDirection::Right});
+        }
+
+		return path;
+	}
+
+	// void onMouseEvent(float mouseX, float mouseY, bool isDown, bool isRelease, int windowWidth, int windowHeight) {
+	// 	float ndcX = (mouse)
 };
 
 
