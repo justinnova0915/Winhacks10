@@ -240,7 +240,8 @@ public:
 			std::random_device rrde;
 			std::mt19937 rde_{rrde()};
 			return rde_;
-		}())
+		}()),
+		cfg(initJsonObject("./config/config.json"))
 	{
 		cout << "start init" << endl;
 		tiles.reinit(MapSize);
@@ -272,7 +273,7 @@ private:
 
 private:
 	// config
-	tx::JsonObject cfg = initJsonObject("./config/config.json");
+	tx::JsonObject cfg;
 	int MapSize = 64;
 	float TileSize = 2.0f / MapSize;
 private:
