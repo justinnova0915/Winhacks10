@@ -5,7 +5,7 @@
             "name": "OpenGL: Run",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/bin/WinHacks", 
+            "program": "${workspaceFolder}/build/bin/WinHacks",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
