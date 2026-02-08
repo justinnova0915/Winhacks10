@@ -112,10 +112,23 @@ namespace tx {
 		
 		template<class Func>
 		void foreach(const Func& func){
-			static_assert(std::is_invocable_v<Func, T&>, "tx::GridSystem::foreach: invalid callback function");
+			static_assert(
+				std::is_invocable_v<Func, T&> || std::is_invocable_v<Func, T> || 
+				std::is_invocable_v<Func, T&, tx::Coord&> || std::is_invocable_v<Func, T&, tx::Coord> ||
+				std::is_invocable_v<Func, T , tx::Coord&> || std::is_invocable_v<Func, T , tx::Coord>,
+				"tx::GridSystem::foreach: invalid callback function");
 			
-			for(T& i : map){
-				func(i);
+			if constexpr (std::is_invocable_v<Func, T&, tx::Coord&>) {
+				tx::Coord cur{0, 0};
+				for(; cur.y() < Height; cur.moveY(1)) {
+					for(; cur.x() < Width; cur.moveX(1)){
+						func(at(cur), cur);
+					} cur.setX(0);
+				}
+			} else {
+				for(T& i : map){
+					func(i);
+				}
 			}
 		}
 

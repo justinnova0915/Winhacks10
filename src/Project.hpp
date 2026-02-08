@@ -21,6 +21,19 @@ void initJsonObject(const std::filesystem::path& filePath, tx::JsonObject& root)
 	cout << "init json done.\n";
 }
 
+enum class CoordDirection {
+    Right,        // 0
+    Left,         // 1
+    Top,          // 2
+    Bottom,       // 3
+    TopRight,     // 4
+    TopLeft,      // 5
+    BottomLeft,   // 6
+    BottomRight   // 7
+};
+constexpr tx::Coord dirToCoord(CoordDirections dir) {
+    return tx::_8wayIncrement[static_cast<int>(dir)];
+}
 
 class BMPFile {
 public:
@@ -257,12 +270,16 @@ public:
 	}
 
 	void render(){
-		tx::Coord cur{0, 0};
-		for(; cur.y() < MapSize; cur.moveY(1)){
-			for(; cur.x() < MapSize; cur.moveX(1)){
-				renderTile_impl(cur, tiles.at(cur).type());
-			} cur.setX(0);
-		}
+		// tx::Coord cur{0, 0};
+		// for(; cur.y() < MapSize; cur.moveY(1)){
+		// 	for(; cur.x() < MapSize; cur.moveX(1)){
+		// 		renderTile_impl(cur, tiles.at(cur).type());
+		// 	} cur.setX(0);
+		// }
+
+		tiles.foreach([this](const Tile& tile, const tx::Coord& pos) {
+			renderTile_impl(pos, tile.type());
+		});
 
 		// tx::PixelEngine::draw(tiles, [](const Tile& in){
 		// 	return tx::getBWColor(!(in.type() == TileType::Space));
@@ -292,6 +309,7 @@ private:
 	};
 	tx::KVMap<string, vector<int>> assetIndexMap; // { name, vector<index> }
 	vector<RGBMap> resources; // all bitmaps
+	tx::GridSystem<int> groundTileMap;
 private:
 	// utility
 	std::mt19937 rde;
@@ -445,8 +463,33 @@ private:
 	}
 
 
+	// ground tiles
+	
+	// must be after all ore gen
+	void initGroundTileMap(){
+		groundTileMap.reinit(MapSize);
+		
+		for(const tx::Coord& i : ores){
+			groundTileMap.at(i) = 1;
+		}
+		tx::Bitmap edge; edge.reserve(tx::sq(MapSize) * 0.4);
+		groundTileMap.foreach([&](int& in, const tx::Coord& pos) { // find edge
+			if(in) return;
+			for(int i = 0; i < 8; ++i){
+				if(groundTileMap.at(pos + tx::_8wayIncrement[i])){
+					edge.emplace_back(pos);
+					break;
+				}
+			}
+		});
 
 
+	}
+
+
+	CoordDirection renderGroundTiles(){
+
+	}
 
 
 
