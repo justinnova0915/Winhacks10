@@ -64,7 +64,7 @@ namespace tx {
 
 
 
-		inline T& at(int index) { return this->map[index]; }
+		inline T& atIndex(int index) { return this->map[index]; }
 		inline T& at(const tx::Coord& pos) {
 			return this->at(pos.x(), pos.y());
 		}

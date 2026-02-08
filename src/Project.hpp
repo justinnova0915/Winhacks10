@@ -31,7 +31,7 @@ enum class CoordDirection {
     BottomLeft,   // 6
     BottomRight   // 7
 };
-constexpr tx::Coord dirToCoord(CoordDirections dir) {
+constexpr tx::Coord dirToCoord(CoordDirection dir) {
     return tx::_8wayIncrement[static_cast<int>(dir)];
 }
 
@@ -218,6 +218,20 @@ RGBMap readBMP(const std::fs::path& fp) {
 
 
 
+
+
+
+
+
+class Data_Conveyer{
+
+};
+
+
+
+
+
+
 enum class TileType{
 	Space,
 	Ore_Iron,
@@ -226,19 +240,27 @@ enum class TileType{
 	Ore_Gold
 };
 
-
-
 class Tile {
 public:
 
+	void update() {
+		switch(m_type){
 
+		}
+	}
 
 	void set(TileType in) { m_type = in; }
-	TileType type() const { return m_type; }
+	TileType        type() const { return m_type; }
+	const tx::Coord& pos() const {return m_pos;}
 	bool operator==(const Tile& other) const { return this->m_type == other.m_type; }
 	bool operator!=(const Tile& other) const { return this->m_type != other.m_type; }
 private:
 	TileType m_type;
+	tx::Coord m_pos;
+
+	Data_Conveyer* conveyer = nullptr;
+	
+
 
 
 };
@@ -246,6 +268,7 @@ private:
 
 // tile amount: 64
 class Game {
+	using id = uint16_t;
 public:
 	Game() : 
 		rde([](){
@@ -270,20 +293,24 @@ public:
 	}
 
 	void render(){
-		// tx::Coord cur{0, 0};
-		// for(; cur.y() < MapSize; cur.moveY(1)){
-		// 	for(; cur.x() < MapSize; cur.moveX(1)){
-		// 		renderTile_impl(cur, tiles.at(cur).type());
-		// 	} cur.setX(0);
-		// }
+		// // tx::Coord cur{0, 0};
+		// // for(; cur.y() < MapSize; cur.moveY(1)){
+		// // 	for(; cur.x() < MapSize; cur.moveX(1)){
+		// // 		renderTile_impl(cur, tiles.at(cur).type());
+		// // 	} cur.setX(0);
+		// // }
 
-		tiles.foreach([this](const Tile& tile, const tx::Coord& pos) {
-			renderTile_impl(pos, tile.type());
-		});
-
-		// tx::PixelEngine::draw(tiles, [](const Tile& in){
-		// 	return tx::getBWColor(!(in.type() == TileType::Space));
+		// tiles.foreach([this](const Tile& tile, const tx::Coord& pos) {
+		// 	renderTile_impl(pos, tile.type());
 		// });
+
+		// // tx::PixelEngine::draw(tiles, [](const Tile& in){
+		// // 	return tx::getBWColor(!(in.type() == TileType::Space));
+		// // });
+
+		for(id i : ores){
+			renderOres_impl(tiles.atIndex(i));
+		}
 
 
 	}
@@ -293,8 +320,7 @@ public:
 private:
 	// runtime data
 	tx::GridSystem<Tile> tiles;
-	//vector<int> extractors;
-	vector<int> ores;
+	vector<id> ores;
 
 private:
 	// config
@@ -307,9 +333,9 @@ private:
 		{TileType::Ore_Gold,   "gold"},
 		{TileType::Ore_Iron,   "iron"}
 	};
-	tx::KVMap<string, vector<int>> assetIndexMap; // { name, vector<index> }
+	tx::KVMap<string, vector<id>> assetIndexMap; // { name, vector<index> }
 	vector<RGBMap> resources; // all bitmaps
-	tx::GridSystem<int> groundTileMap;
+	tx::GridSystem<id> groundTileMap;
 private:
 	// utility
 	std::mt19937 rde;
@@ -390,27 +416,36 @@ private:
 
 	// render ********************************
 
-	void renderTile_impl(const tx::Coord& in_pos, TileType type){
-		tx::vec2 pos = tx::toVec2(in_pos) * TileSize;
+	// void renderTile_impl(const tx::Coord& in_pos, TileType type){
+	// 	tx::vec2 pos = tx::toVec2(in_pos) * TileSize;
 
-		switch(type){
-		case TileType::Ore_Coal:
-		case TileType::Ore_Copper:
-		case TileType::Ore_Gold:
-		case TileType::Ore_Iron:
-			tx::PixelEngine::drawRGBmap(
-				resources.at(
-					getRandAsset(assetNameMap.at(type))),
-				pos, TileSize);
-			break;
-		case TileType::Space:
+	// 	switch(type){
+	// 	case TileType::Ore_Coal:
+	// 	case TileType::Ore_Copper:
+	// 	case TileType::Ore_Gold:
+	// 	case TileType::Ore_Iron:
+	// 		tx::PixelEngine::drawRGBmap(
+	// 			resources.at(
+	// 				getRandAsset(assetNameMap.at(type))),
+	// 			pos, TileSize);
+	// 		break;
+	// 	case TileType::Space:
 
-			break;
-		}
+	// 		break;
+	// 	}
 
-		//tx::drawRectP(pos, TileSize, TileSize);
+	// 	//tx::drawRectP(pos, TileSize, TileSize);
 		
+	// }
+	tx::vec2 getRenderPos(const tx::Coord& in) const {
+		return tx::toVec2(in) * TileSize;
 	}
+	void renderOres_impl(const Tile& tile) {
+		tx::PixelEngine::drawRGBmap(
+			resources.at(getRandAsset(assetNameMap.at(tile.type()))),
+			getRenderPos(tile.pos()), TileSize);
+	}	
+
 
 	void initAssets() {
 		initAssetIndexMap();
@@ -421,7 +456,7 @@ private:
 		const tx::JsonObject& artCfg = cfg["Art"].get<tx::JsonObject>();
 
 		// unique
-		tx::KVMap<string, int> pathRecorder; // path : id
+		tx::KVMap<string, id> pathRecorder; // path : id
 
 		for(const tx::JsonPair& i : artCfg){
 			const tx::JsonArray& assetVariants = i.v().get<tx::JsonArray>();
@@ -438,7 +473,7 @@ private:
 					// assetIndexMap
 				} else {
 					// assetIndexMap
-					int index = pathRecorder.at(resourcePathStr);
+					id index = pathRecorder.at(resourcePathStr);
 					hMap.get().push_back(index);
 				}				
 			}
@@ -456,8 +491,8 @@ private:
 	// }
 
 	// get asset variant of a asset
-	int getRandAsset(const string& assetName) {
-		const vector<int>& variantPaths = assetIndexMap.at(assetName); // all variant paths for an asset
+	id getRandAsset(const string& assetName) {
+		const vector<id>& variantPaths = assetIndexMap.at(assetName); // all variant paths for an asset
 		std::uniform_int_distribution<int> dist{0, variantPaths.size() - 1};
 		return variantPaths[dist(rde)];
 	}
@@ -473,9 +508,9 @@ private:
 			groundTileMap.at(i) = 1;
 		}
 		tx::Bitmap edge; edge.reserve(tx::sq(MapSize) * 0.4);
-		groundTileMap.foreach([&](int& in, const tx::Coord& pos) { // find edge
+		groundTileMap.foreach([&](id& in, const tx::Coord& pos) { // find edge
 			if(in) return;
-			for(int i = 0; i < 8; ++i){
+			for(uint8_t i = 0; i < 8; ++i){
 				if(groundTileMap.at(pos + tx::_8wayIncrement[i])){
 					edge.emplace_back(pos);
 					break;
@@ -485,7 +520,7 @@ private:
 
 
 	}
-	CoordDirection findGroundTileDir(const tx::Bitmap& ) {
+	CoordDirection findGroundTileDir(const tx::Bitmap& tiles) {
 
 	}
 
