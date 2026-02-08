@@ -1,0 +1,10 @@
+{
+	"OreGeneration": {
+		"PolicyCommon": {
+			"radius": 5,
+			"surroundingClusterOffset": 5,
+			"surroundingClusterAmount": 3,
+			"surroundingClusterRadius": 3
+		}
+	}
+}

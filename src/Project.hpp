@@ -26,90 +26,90 @@ class BMPFile {
 public:
 	// headers **********************************************************
     // ================= BMP FILE HEADER =================
-// Fixed size: 14 bytes
-// Purpose: describes the FILE, not the image itself
-
-// Signature of the file.
-// Must be 'BM' (0x4D42, little-endian).
-// This is how you know the file is a BMP at all.
-uint16_t bfType;
-
-// Total size of the BMP file in bytes.
-// Includes headers, palettes, padding, and pixel data.
-// Rarely needed in loaders, mostly informational.
-uint32_t bfSize;        
-
-// Reserved by Microsoft.
-// Must be zero.
-// You ignore these, but non-zero usually means malformed file.
-uint16_t bfReserved1;  
-uint16_t bfReserved2;  
-
-// Offset (in bytes from beginning of file) to the FIRST pixel.
-// This is the most important field in the file header.
-// You MUST seek to this location before reading pixel data.
-// Everything between the start of the file and bfOffBits is "metadata".
-uint32_t bfOffBits;    
-
-
-// ================= DIB HEADER =================
-// Variable size (at least 12 bytes, usually 40)
-// Purpose: describes the IMAGE layout
-
-// Size of the DIB header in bytes.
-// Determines which DIB format is used:
-//  40  = BITMAPINFOHEADER (classic, what you want)
-// 108  = BITMAPV4HEADER
-// 124  = BITMAPV5HEADER
-// Never assume 40 — always read this.
-uint32_t dibSize;       
-
-// Raw bytes of the DIB header AFTER dibSize.
-// Size = dibSize - 4.
-// Stored raw so:
-//  - you support future BMP variants
-//  - you don’t need different structs per version
-// You selectively parse fields you care about.
-std::vector<uint8_t> dibData; 
-
-
-// ========== COMMONLY USED IMAGE FIELDS ==========
-// These exist starting from BITMAPINFOHEADER (dibSize >= 40)
-// Offsets are RELATIVE TO dibData (not file start)
-
-// Image width in pixels.
-// Positive value only.
-// This defines how many pixels per row.
-int32_t width = 0;      
-
-// Image height in pixels.
-// IMPORTANT SIGN MEANING:
-//   > 0 : image is bottom-up (row 0 = bottom row)
-//   < 0 : image is top-down  (row 0 = top row)
-// Magnitude is the pixel height.
-int32_t height = 0;     
-
-// Must be 1.
-// Historical artifact from old hardware.
-// If not 1, the file is invalid.
-uint16_t planes = 0;   
-
-// Bits per pixel.
-// Common values:
-//   24 = BGR (no alpha)
-//   32 = BGRA
-//   8  = paletted
-// This tells you how many BYTES each pixel occupies.
-uint16_t bitCount = 0; 
-
-// Compression method.
-// Common values:
-//   0 = BI_RGB (no compression) ← what you want
-//   1 = BI_RLE8
-//   2 = BI_RLE4
-//   3 = BI_BITFIELDS
-// Anything non-zero usually complicates loading.
-uint32_t compression = 0;
+	// Fixed size: 14 bytes
+	// Purpose: describes the FILE, not the image itself
+	
+	// Signature of the file.
+	// Must be 'BM' (0x4D42, little-endian).
+	// This is how you know the file is a BMP at all.
+	uint16_t bfType;
+	
+	// Total size of the BMP file in bytes.
+	// Includes headers, palettes, padding, and pixel data.
+	// Rarely needed in loaders, mostly informational.
+	uint32_t bfSize;        
+	
+	// Reserved by Microsoft.
+	// Must be zero.
+	// You ignore these, but non-zero usually means malformed file.
+	uint16_t bfReserved1;  
+	uint16_t bfReserved2;  
+	
+	// Offset (in bytes from beginning of file) to the FIRST pixel.
+	// This is the most important field in the file header.
+	// You MUST seek to this location before reading pixel data.
+	// Everything between the start of the file and bfOffBits is "metadata".
+	uint32_t bfOffBits;    
+	
+	
+	// ================= DIB HEADER =================
+	// Variable size (at least 12 bytes, usually 40)
+	// Purpose: describes the IMAGE layout
+	
+	// Size of the DIB header in bytes.
+	// Determines which DIB format is used:
+	//  40  = BITMAPINFOHEADER (classic, what you want)
+	// 108  = BITMAPV4HEADER
+	// 124  = BITMAPV5HEADER
+	// Never assume 40 — always read this.
+	uint32_t dibSize;       
+	
+	// Raw bytes of the DIB header AFTER dibSize.
+	// Size = dibSize - 4.
+	// Stored raw so:
+	//  - you support future BMP variants
+	//  - you don’t need different structs per version
+	// You selectively parse fields you care about.
+	std::vector<uint8_t> dibData; 
+	
+	
+	// ========== COMMONLY USED IMAGE FIELDS ==========
+	// These exist starting from BITMAPINFOHEADER (dibSize >= 40)
+	// Offsets are RELATIVE TO dibData (not file start)
+	
+	// Image width in pixels.
+	// Positive value only.
+	// This defines how many pixels per row.
+	int32_t width = 0;      
+	
+	// Image height in pixels.
+	// IMPORTANT SIGN MEANING:
+	//   > 0 : image is bottom-up (row 0 = bottom row)
+	//   < 0 : image is top-down  (row 0 = top row)
+	// Magnitude is the pixel height.
+	int32_t height = 0;     
+	
+	// Must be 1.
+	// Historical artifact from old hardware.
+	// If not 1, the file is invalid.
+	uint16_t planes = 0;   
+	
+	// Bits per pixel.
+	// Common values:
+	//   24 = BGR (no alpha)
+	//   32 = BGRA
+	//   8  = paletted
+	// This tells you how many BYTES each pixel occupies.
+	uint16_t bitCount = 0; 
+	
+	// Compression method.
+	// Common values:
+	//   0 = BI_RGB (no compression) ← what you want
+	//   1 = BI_RLE8
+	//   2 = BI_RLE4
+	//   3 = BI_BITFIELDS
+	// Anything non-zero usually complicates loading.
+	uint32_t compression = 0;
 
 
 	bool valid = 1;
@@ -210,7 +210,8 @@ enum class TileType{
 	Ore_Iron,
 	Ore_Copper,
 	Ore_Coal,
-	Ore_Gold
+	Ore_Gold,
+
 
 };
 
@@ -221,9 +222,10 @@ public:
 
 
 
-	void set(TileType in) { type = in; }
+	void set(TileType in) { m_type = in; }
+	TileType type() const { return m_type; }
 private:
-	TileType type;
+	TileType m_type;
 
 
 };
@@ -234,11 +236,13 @@ class Game {
 public:
 	Game() : 
 		rde([](){
+			cout << "init rde" << endl;
 			std::random_device rrde;
 			std::mt19937 rde_{rrde()};
 			return rde_;
 		}())
 	{
+		cout << "start init" << endl;
 		tiles.reinit(MapSize);
 		genOreTiles_impl();
 	}
@@ -248,9 +252,10 @@ public:
 	}
 
 	void render(){
-		for(int y = 0; y < MapSize; ++y){
-			for(int x = 0; x < MapSize; ++x){
-				
+		tx::Coord cur{0, 0};
+		for(; cur.y() < MapSize; cur.moveY(1)){
+			for(; cur.x() < MapSize; cur.moveX(1)){
+				renderTile_impl(cur, tiles.at(cur).type());
 			}
 		}
 
@@ -267,7 +272,7 @@ private:
 
 private:
 	// config
-	tx::JsonObject cfg = initJsonObject("./config.json");
+	tx::JsonObject cfg = initJsonObject("./config/config.json");
 	int MapSize = 64;
 	float TileSize = 2.0f / MapSize;
 private:

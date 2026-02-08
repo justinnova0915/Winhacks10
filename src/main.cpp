@@ -34,7 +34,7 @@ class Application {
 	void onKeyEvent(GLFWwindow* window, int key, int scancode, int action, int mods) {
 		if (action == GLFW_PRESS || action == GLFW_REPEAT) {
 			switch (key) {
-				
+
 			}
 		}
 	}
