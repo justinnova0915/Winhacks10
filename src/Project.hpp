@@ -485,9 +485,11 @@ private:
 
 
 	}
+	CoordDirection findGroundTileDir(const tx::Bitmap& ) {
 
+	}
 
-	CoordDirection renderGroundTiles(){
+	void renderGroundTiles(){
 
 	}
 
