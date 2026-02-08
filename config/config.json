@@ -1,10 +1,18 @@
 {
 	"OreGeneration": {
 		"PolicyCommon": {
-			"radius": 5,
-			"surroundingClusterOffset": 5,
-			"surroundingClusterAmount": 3,
-			"surroundingClusterRadius": 3
+			"clusterAmount": 4,
+			"radius": 6.0,
+			"surroundingClusterOffsetMin": 3,
+			"surroundingClusterOffsetMax": 5,
+			"surroundingClusterAmount": 6,
+			"surroundingClusterRadius": 3.5
 		}
+	},
+	"Art": {
+		"coal":   [ "coal/coal1.bmp" ],
+		"copper": [ "copper/copper1.bmp" ],
+		"gold":   [ "gold/gold1.bmp" ],
+		"iron":   [ "iron/iron1.bmp", "iron/iron2.bmp" ]
 	}
 }

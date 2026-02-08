@@ -9,12 +9,12 @@
 void drawMathLine(const tx::MathLine& line) {
 	tx::drawLine(tx::vec2{ -1.0f, tx::findLineY(line, -1.0f) }, tx::vec2{ 1.0f, tx::findLineY(line, 1.0f) });
 }
-tx::JsonObject initJsonObject(const std::filesystem::path& filePath) {
+void initJsonObject(const std::filesystem::path& filePath, tx::JsonObject& root) {
 	cout << "init json...\n";
 	string str;
 	tx::readWholeFile(filePath, str);
 
-	tx::JsonObject root = tx::JsonObject{};
+	root = tx::JsonObject{};
 	tx::JsonParser parser;
 	cout << "start init json.\n";
 	parser.parse(str, root);
@@ -169,11 +169,11 @@ private:
 
 };
 
-using bmp = tx::GridSystem<tx::RGB>;
-bmp readBMP(const std::fs::path& fp) {
+using RGBMap = tx::GridSystem<tx::RGB>;
+RGBMap readBMP(const std::fs::path& fp) {
 	BMPFile file{fp};
 	
-	bmp map{file.width, file.height};
+	RGBMap map{file.width, file.height};
 
     std::ifstream& ifs = file.getIfs();
 
@@ -199,7 +199,7 @@ bmp readBMP(const std::fs::path& fp) {
             ));
         }
     }
-
+	//map.foreach([](const tx::RGB& in){ cout << in; });
 	return map;
 }
 
@@ -210,9 +210,7 @@ enum class TileType{
 	Ore_Iron,
 	Ore_Copper,
 	Ore_Coal,
-	Ore_Gold,
-
-
+	Ore_Gold
 };
 
 
@@ -224,6 +222,8 @@ public:
 
 	void set(TileType in) { m_type = in; }
 	TileType type() const { return m_type; }
+	bool operator==(const Tile& other) const { return this->m_type == other.m_type; }
+	bool operator!=(const Tile& other) const { return this->m_type != other.m_type; }
 private:
 	TileType m_type;
 
@@ -236,15 +236,19 @@ class Game {
 public:
 	Game() : 
 		rde([](){
-			cout << "init rde" << endl;
 			std::random_device rrde;
 			std::mt19937 rde_{rrde()};
 			return rde_;
-		}()),
-		cfg(initJsonObject("./config/config.json"))
+		}())
 	{
 		cout << "start init" << endl;
+
 		tiles.reinit(MapSize);
+		initJsonObject("./config/config.json", cfg);
+
+		cout << "start init assets..." << endl;
+		initAssets();
+		cout << "init assets done." << endl;
 		genOreTiles_impl();
 	}
 
@@ -257,8 +261,12 @@ public:
 		for(; cur.y() < MapSize; cur.moveY(1)){
 			for(; cur.x() < MapSize; cur.moveX(1)){
 				renderTile_impl(cur, tiles.at(cur).type());
-			}
+			} cur.setX(0);
 		}
+
+		// tx::PixelEngine::draw(tiles, [](const Tile& in){
+		// 	return tx::getBWColor(!(in.type() == TileType::Space));
+		// });
 
 
 	}
@@ -274,12 +282,22 @@ private:
 private:
 	// config
 	tx::JsonObject cfg;
-	int MapSize = 64;
+	int MapSize = 16;
 	float TileSize = 2.0f / MapSize;
+	inline static const tx::KVMap<TileType, string> assetNameMap = {
+		{TileType::Ore_Coal,   "coal"},
+		{TileType::Ore_Copper, "copper"},
+		{TileType::Ore_Gold,   "gold"},
+		{TileType::Ore_Iron,   "iron"}
+	};
+	tx::KVMap<string, vector<int>> assetIndexMap; // { name, vector<index> }
+	vector<RGBMap> resources; // all bitmaps
 private:
 	// utility
 	std::mt19937 rde;
 	std::uniform_int_distribution<int> dist_map{0, MapSize - 1};
+	std::uniform_int_distribution<int> dist_np{-1, 1};
+	
 
 
 	void setOreTile_impl(const tx::Coord& pos, TileType type) {
@@ -295,53 +313,57 @@ private:
 
 
 	void genOreTiles_impl() {
-		genOre_PolicyCommon_impl(TileType::Ore_Coal);
+		genOre_impl("PolicyCommon", TileType::Ore_Coal);
 	}
-	void genOre_PolicyCommon_impl(TileType type) {
-		static tx::JsonObject policyCfg = cfg["OreGeneration"]["PolicyCommon"].get<tx::JsonObject>();
-		static tx::Bitmap circle;
-		static int radius = [&](){
-			cout << "radius\n";
-			int r = policyCfg["radius"].get<int>(); // 5
+	void genOre_impl(const string& policy, TileType type) {
+		const tx::JsonObject& policyCfg = cfg["OreGeneration"][policy].get<tx::JsonObject>();
+		tx::Bitmap circle;
+		float radius = [&](){
+			float r = policyCfg["radius"].get<float>();
 			tx::GridCircle gc{r};
 			gc.getBitMap(tx::CoordOrigin, circle);
 			return r;
 		}();
-		static tx::Bitmap surroundingCircle;
-		static int surroundingRadius = [&](){
-			cout << "sradius\n";
-			int sr = policyCfg["surroundingClusterRadius"].get<int>();
+		tx::Bitmap surroundingCircle;
+		float surroundingRadius = [&](){
+			float sr = policyCfg["surroundingClusterRadius"].get<float>();
 			tx::GridCircle gc{sr};
 			gc.getBitMap(tx::CoordOrigin, surroundingCircle);
 			return sr;
 		}();
-		static std::uniform_int_distribution<int> dist_offset{0, 5/*policyCfg["surroundingClusterOffset"].get<int>*/};
-
-		tx::Coord center = getRandCoord_impl();
-		vector<tx::Coord> surroundingCenters{policyCfg["surroundingClusterAmount"].get<int>()}; // 3
-		for(tx::Coord& i : surroundingCenters){
-			i = center.offset(dist_offset(rde), dist_offset(rde));
-		}
-
-		//tx::Bitmap map{(1 + surroundingCenters.size()) * circle.size()};
+		std::uniform_int_distribution<int> dist_offset{
+			policyCfg["surroundingClusterOffsetMin"].get<int>(),
+			policyCfg["surroundingClusterOffsetMax"].get<int>()};
 		
-		auto setOreTiles = [&](const tx::Coord& pos, const tx::Bitmap& map){
-			for(const tx::Coord& i : map){
-				setOreTile_impl(i + pos, type);
+		int clusterAmount = policyCfg["clusterAmount"].get<int>();
+		for(int i = 0; i < clusterAmount; ++i){
+			tx::Coord center = getRandCoord_impl();
+			int surroundingClusterAmount = policyCfg["surroundingClusterAmount"].get<int>();
+			//cout << surroundingClusterAmount << endl;
+			vector<tx::Coord> surroundingCenters(surroundingClusterAmount);
+			for(tx::Coord& i : surroundingCenters){
+				i = center.offset(dist_np(rde) * dist_offset(rde), dist_np(rde) * dist_offset(rde));
 			}
-		};
-		
-		setOreTiles(center, circle);
-		for(const tx::Coord& i : surroundingCenters){
-			setOreTiles(i, surroundingCircle);
+
+			auto setOreTiles = [&](const tx::Coord& pos, const tx::Bitmap& map){
+				for(const tx::Coord& i : map){
+					setOreTile_impl(i + pos, type);
+				}
+			};
+			
+			setOreTiles(center, circle);
+			for(const tx::Coord& i : surroundingCenters){
+				setOreTiles(i, surroundingCircle);
+			}
 		}
 	}
+
 
 	tx::Coord getRandCoord_impl() {
 		return tx::Coord{dist_map(rde), dist_map(rde)};
 	}
 	bool valid_impl(const tx::Coord& in) const {
-		tx::inRange(in, tx::CoordOrigin, tx::Coord{MapSize});
+		return tx::inRange(in, tx::CoordOrigin, tx::Coord{MapSize});
 	}
 
 
@@ -353,28 +375,74 @@ private:
 	void renderTile_impl(const tx::Coord& in_pos, TileType type){
 		tx::vec2 pos = tx::toVec2(in_pos) * TileSize;
 
-		// switch(type){
-		// case TileType::Ore_Coal:
+		switch(type){
+		case TileType::Ore_Coal:
+		case TileType::Ore_Copper:
+		case TileType::Ore_Gold:
+		case TileType::Ore_Iron:
+			tx::PixelEngine::drawRGBmap(
+				resources.at(
+					getRandAsset(assetNameMap.at(type))),
+				pos, TileSize);
+			break;
+		case TileType::Space:
 
-		// 	break;
-		// case TileType::Ore_Copper:
+			break;
+		}
 
-		// 	break;
-		// case TileType::Ore_Gold:
-
-		// 	break;
-		// case TileType::Ore_Iron:
-
-		// 	break;
-		// case TileType::Space:
-
-		// 	break;
-		// }
-
-		tx::drawRectP(pos, TileSize, TileSize);
+		//tx::drawRectP(pos, TileSize, TileSize);
 		
 	}
 
+	void initAssets() {
+		initAssetIndexMap();
+		//loadResources();
+	}
+	void initAssetIndexMap() {
+		const string dirPath = "./converted/";
+		const tx::JsonObject& artCfg = cfg["Art"].get<tx::JsonObject>();
+
+		// unique
+		tx::KVMap<string, int> pathRecorder; // path : id
+
+		for(const tx::JsonPair& i : artCfg){
+			const tx::JsonArray& assetVariants = i.v().get<tx::JsonArray>();
+			tx::KVMapHandle hMap = assetIndexMap.insertMulti(i.k());
+			hMap.get().reserve(assetVariants.size());
+			for(const tx::JsonValue& resourcePath : assetVariants){
+				const string& resourcePathStr = resourcePath.get<string>();
+				if(!pathRecorder.exist(resourcePathStr)){
+					// resource
+					pathRecorder.insertSingle(resourcePathStr, resources.size());
+					hMap.get().push_back(resources.size());
+					RGBMap bmp = readBMP(dirPath + resourcePathStr);
+					resources.push_back(std::move(bmp));
+					// assetIndexMap
+				} else {
+					// assetIndexMap
+					int index = pathRecorder.at(resourcePathStr);
+					hMap.get().push_back(index);
+				}				
+			}
+		} assetIndexMap.validate();
+	}
+	// void loadResources() {
+	// 	for(const tx::KVPair<string, vector<string>>& i : assetIndexMap){
+	// 		for(const string& resourcePathStr : i.v()){
+	// 			if(resources.exist(resourcePathStr)) continue;
+	// 			tx::KVMapHandle hMap = resources.insertSingle(resourcePathStr);
+	// 			RGBMap bmp = readBMP(resourcePathStr);
+	// 			hMap.get() = std::move(bmp);
+	// 		}
+	// 	}
+	// }
+
+	// get asset variant of a asset
+	int getRandAsset(const string& assetName) {
+		const vector<int>& variantPaths = assetIndexMap.at(assetName); // all variant paths for an asset
+		std::uniform_int_distribution<int> dist{0, variantPaths.size() - 1};
+		return variantPaths[dist(rde)];
+	}
 
 
 

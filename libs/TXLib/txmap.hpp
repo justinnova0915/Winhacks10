@@ -60,6 +60,13 @@ namespace tx {
 			static_assert(std::is_invocable_r_v<bool, CompareFunc, KT, KT>,
 				"tx::KVMap: the type of key need to be comparable with a compare function. The provided type or CompareFunction don't match the requirements.");
 		}
+		KVMap(std::initializer_list<Pair> in_data,  CompareFunc in_cmp = std::less<KT>{}) : 
+			pairs(in_data), cmp(in_cmp)
+		{
+			static_assert(std::is_invocable_r_v<bool, CompareFunc, KT, KT>,
+				"tx::KVMap: the type of key need to be comparable with a compare function. The provided type or CompareFunction don't match the requirements.");
+			validate();
+		}
 		
 
 		// general
@@ -222,8 +229,13 @@ namespace tx {
 		inline Handle insertOrder_impl(const KT& key, const VT& value) {
 			auto it = findItOrder_impl(key);
 			if (validIt_impl(it, key)) throw_Impl();
-			this->pairs.insert(it, Pair{ key, value });
-			return Handle{ this, static_cast<int>(it - this->pairs.begin()) };
+			if(it == this->pairs.end()){
+				this->pairs.emplace_back(key, value);
+				return Handle{ this, this->pairs.size() - 1 };
+			} else {
+				this->pairs.insert(it, Pair{ key, value });
+				return Handle{ this, static_cast<int>(it - this->pairs.begin()) };
+			}
 		}
 
 		inline auto findItOrder_impl(const KT& key) {
@@ -277,15 +289,14 @@ namespace tx {
 		using It_t      = vector<T>::iterator;
 		//using ConstIt_t = vector<T>::const_iterator;
 	public:
-		template<class in_T>
-		SetView(vector<in_T>::iterator in_beginIt, vector<in_T>::iterator in_endIt, CmpFunc in_cmp = std::less<in_T>{}) :
+		SetView(It_t in_beginIt, It_t in_endIt, CmpFunc in_cmp = std::less<T>{}) :
 			m_beginIt(in_beginIt), m_endIt(in_endIt), cmp(in_cmp)
 		{
 			sort_impl();
 		}
 
 
-		inline bool exist(const T& in) const { return validIt_impl(findIt_impl(in)); }
+		inline bool exist(const T& in) const { return validIt_impl(findIt_impl(in), in); }
 		inline int count(const T& in) const {
 			auto it = findIt_impl(in);
 			int counter = 0;
@@ -294,11 +305,16 @@ namespace tx {
 				++it;
 			} return counter;
 		}
+		inline int find(const T& key) const {
+			It_t it = findIt_impl(key);
+			if(!validIt_impl(it, key)) return -1;
+			return static_cast<int>(it - m_beginIt);
+		}
 
 		
 		inline void validate() { sort_impl(); }
 
-		inline void push_back(int amount) {
+		inline void push_back(int amount = 1) {
 			m_endIt += amount;
 			sort_impl();
 		}
@@ -323,11 +339,9 @@ namespace tx {
 			std::sort(m_beginIt, m_endIt, cmp);
 		}
 
-		inline bool isSame_impl(const T& a, const T& b) const { return cmp(a, b) != cmp(b, a); }
+		inline bool isSame_impl(const T& a, const T& b) const { return cmp(a, b) == cmp(b, a); }
 		template<class It>
 		inline bool validIt_impl(const It& it, const T& key) const { return (it != m_endIt && isSame_impl(*it, key)); }
-
-
 
 
 

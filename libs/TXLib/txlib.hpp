@@ -436,6 +436,9 @@ namespace tx {
 	constexpr RGB MikuColorBegin = RGB(0, 230, 255);
 	constexpr RGB MikuColorEnd   = RGB(0, 255, 200);
 
+	inline std::ostream& operator<<(std::ostream& in_cout, const RGB&  in_rgb ) { in_cout << "( " << in_rgb.r() << ", " << in_rgb.g() << ", " << in_rgb.b() << " )"; return in_cout; }
+
+
 
 	class Rainbow {
 	public:

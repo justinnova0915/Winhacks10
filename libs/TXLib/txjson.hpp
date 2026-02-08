@@ -166,9 +166,11 @@ namespace tx {
 				if (str[index] == '}') break;
 				if (str[index] != '"') _throw();
 				_parseKeyValue(str, root, index);
+
 			}
 
 			rootmap.validate();
+			++index;
 		}
 		void _parseKeyValue(const string& str, JsonObject& root, int& index) { // index is where the " of the key is in the entire string
 			JsonMap& rootmap = root.members;

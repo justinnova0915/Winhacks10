@@ -47,7 +47,9 @@ class Application {
 
 	}
 	void render() {
+		//tx::Time::Timer timer;
 		game.render();
+		//cout << timer.duration() << "ms" << endl;
 	}
 };
 
@@ -56,8 +58,9 @@ int main() {
 		cout << "[FatalError]: Failed to init GLFW\n";
 		return 0;
 	}
+	cout << "Initializing Application...\n";
 	Application app;
-	cout << "[Status]: Successfully initialized window.\n";
+	cout << "[Status]: Successfully initialized Application.\n";
 	app.run();
 	return 0;
 }

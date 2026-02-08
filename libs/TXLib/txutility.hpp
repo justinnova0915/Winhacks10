@@ -19,7 +19,8 @@ namespace tx {
 					return a.y() < b.y();
 				}
 			});
-		map.erase(std::unique(map.begin(), map.end()));
+		auto it = std::unique(map.begin(), map.end());
+		map.erase(it, map.end());
 	}
 	void clampBitmap(Bitmap& map, const Coord& bottomLeft, const Coord& topRight){
 		map.erase(std::remove_if(map.begin(), map.end(), [&](const Coord& in) {
@@ -291,8 +292,8 @@ namespace tx {
 		}
 
 		void getBitMap(const tx::Coord& center, vector<tx::Coord>& buffer) {
-			buffer.clear();
 			buffer.reserve(getGridAmount());
+			buffer.clear();
 			buffer.push_back(center);
 			for (int j = 0; j < 2; j++) {
 				tx::Coord temp = center;
